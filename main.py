@@ -23,7 +23,7 @@ socketio = SocketIO(app, async_mode='threading')
 port = int(os.environ.get("PORT", "5000"))
 logging.info(f"✅ Using port: {port}")
 
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+ADMIN_PASSWORD = "sneha"
 
 active_processes = {}
 active_bots = {}
@@ -73,10 +73,6 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     print('Client disconnected')
-
-@socketio.on('ping')
-def handle_ping():
-    emit('pong')
 
 @socketio.on('execute')
 def handle_execute(data):
