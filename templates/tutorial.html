@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram API Setup Tutorial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; 
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #space-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; 
+            background: linear-gradient(to bottom, #020617 0%, #1e1b4b 100%);
+        }
+
+        .glass { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px); 
+            border: 1px solid rgba(148, 163, 184, 0.1); 
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-left: 4px solid #667eea;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #language-modal {
+            backdrop-filter: blur(8px);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="text-gray-100 p-4 md:p-8 min-h-screen">
+
+    <canvas id="space-canvas"></canvas>
+
+    <div id="language-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+        <div class="glass rounded-xl shadow-2xl p-8 max-w-md mx-4 border border-purple-500/50">
+            <h2 class="text-2xl font-bold text-white mb-4 text-center">Choose Your Language</h2>
+            <p class="text-gray-300 mb-6 text-center">আপনার ভাষা নির্বাচন করুন</p>
+            <div class="flex gap-4">
+                <button onclick="setLanguage('en')" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg">
+                    English
+                </button>
+                <button onclick="setLanguage('bn')" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg">
+                    বাংলা
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <header class="mb-8">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2" data-lang-key="title">
+                        📱 Telegram API Setup Tutorial
+                    </h1>
+                    <p class="text-gray-400" data-lang-key="subtitle">How to get Telegram API ID and API Hash - Complete Guide</p>
+                </div>
+                <div class="ml-4">
+                    <select id="language-switcher" onchange="switchLanguage(this.value)" class="glass text-white border border-gray-600 rounded-xl px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                        <option value="en">English</option>
+                        <option value="bn">বাংলা</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-center">
+                <a href="/" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg" data-lang-key="back-button">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </header>
+
+        <div class="glass rounded-2xl shadow-2xl p-6 md:p-8 mb-8 border border-slate-700">
+            <h2 class="text-2xl font-bold text-purple-400 mb-6 flex items-center gap-3">
+                <i class="fas fa-video text-purple-400"></i>
+                <span data-lang-key="video-title">Video Tutorial</span>
+            </h2>
+            
+            <div class="video-container mb-4">
+                <video id="tutorial-video" controls preload="metadata" controlsList="nodownload">
+                    <source src="/api/video/tutorial" type="video/mp4">
+                    <span data-lang-key="video-not-supported">Your browser does not support video playback.</span>
+                </video>
+            </div>
+            
+            <p class="text-gray-400 text-sm text-center">
+                <i class="fas fa-lightbulb text-yellow-400"></i> <strong data-lang-key="video-tip-label">Tip:</strong> <span data-lang-key="video-tip">Watch the video to understand the complete process, then follow the steps below.</span>
+            </p>
+        </div>
+
+        <div class="glass rounded-2xl shadow-2xl p-6 md:p-8 mb-8 border border-slate-700">
+            <h2 class="text-2xl font-bold text-green-400 mb-6 flex items-center gap-3">
+                <i class="fas fa-list-ol text-green-400"></i>
+                <span data-lang-key="steps-title">Step by Step Guide</span>
+            </h2>
+            
+            <div class="space-y-6">
+                <div class="flex gap-4">
+                    <div class="step-number">1</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-white mb-2" data-lang-key="step1-title">Visit Telegram Web</h3>
+                        <p class="text-gray-300 mb-3" data-lang-key="step1-desc">Open this link in your browser:</p>
+                        <div class="highlight-box p-4 rounded-lg">
+                            <a href="https://my.telegram.org" target="_blank" class="text-blue-400 hover:text-blue-300 font-mono text-lg break-all flex items-center gap-2">
+                                <i class="fas fa-external-link-alt"></i>
+                                https://my.telegram.org
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="step-number">2</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-white mb-2" data-lang-key="step2-title">Log In</h3>
+                        <p class="text-gray-300 mb-2" data-lang-key="step2-desc">Log in with your Telegram phone number. You'll receive a code in your Telegram app - enter that code.</p>
+                        <div class="bg-yellow-900/30 border border-yellow-600/50 p-3 rounded-lg mt-2">
+                            <p class="text-yellow-300 text-sm">
+                                <i class="fas fa-exclamation-triangle"></i> <strong data-lang-key="important">Important:</strong> <span data-lang-key="step2-warning">If you have 2FA (Two-Factor Authentication) enabled on your Telegram account, you'll need to enter your password.</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="step-number">3</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-white mb-2" data-lang-key="step3-title">Go to API Development Tools</h3>
+                        <p class="text-gray-300 mb-2">
+                            <span data-lang-key="step3-desc">After logging in, click on the</span> <strong>"API development tools"</strong> <span data-lang-key="step3-desc2">option.</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="step-number">4</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-white mb-2" data-lang-key="step4-title">Create New Application</h3>
+                        <p class="text-gray-300 mb-3" data-lang-key="step4-desc">Fill in the following information to create a new application:</p>
+                        <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+                            <li><strong>App title:</strong> <span data-lang-key="step4-app-title">Any name (e.g., My Bot)</span></li>
+                            <li><strong>Short name:</strong> <span data-lang-key="step4-short-name">Short name (e.g., mybot)</span></li>
+                            <li><strong>Platform:</strong> <span data-lang-key="step4-platform">Select something (e.g., Desktop)</span></li>
+                            <li><strong>Description:</strong> <span data-lang-key="step4-description">(Optional - you can leave it blank)</span></li>
+                        </ul>
+                        <p class="text-gray-400 text-sm mt-3">
+                            <i class="fas fa-edit"></i> <span data-lang-key="step4-note">Then click the "Create application" button.</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="step-number">5</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-white mb-2" data-lang-key="step5-title">Copy API ID and API Hash</h3>
+                        <p class="text-gray-300 mb-3" data-lang-key="step5-desc">Once the application is created, you will see:</p>
+                        <div class="space-y-3">
+                            <div class="highlight-box p-4 rounded-lg">
+                                <p class="text-purple-400 font-semibold mb-1"><i class="fas fa-hashtag"></i> API ID</p>
+                                <p class="text-gray-300 text-sm" data-lang-key="step5-api-id">A number (e.g., 12345678)</p>
+                            </div>
+                            <div class="highlight-box p-4 rounded-lg">
+                                <p class="text-purple-400 font-semibold mb-1"><i class="fas fa-key"></i> API Hash</p>
+                                <p class="text-gray-300 text-sm" data-lang-key="step5-api-hash">A long hex code (e.g., 0123456789abcdef0123456789abcdef)</p>
+                            </div>
+                        </div>
+                        <div class="bg-red-900/30 border border-red-600/50 p-3 rounded-lg mt-4">
+                            <p class="text-red-300 text-sm">
+                                <i class="fas fa-shield-alt"></i> <strong data-lang-key="security-warning-label">Security Warning:</strong> <span data-lang-key="security-warning">Never share this API ID and Hash with anyone! These are the keys to your Telegram account.</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="glass rounded-2xl shadow-2xl p-6 md:p-8 mb-8 border border-purple-500/30">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <i class="fas fa-check-circle text-green-400"></i>
+                <span data-lang-key="input-section-title">✅ Where to Input Credentials?</span>
+            </h2>
+            
+            <div class="space-y-4">
+                <div class="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3" data-lang-key="return-to-main">Return to Main Page</h3>
+                    <p class="text-gray-300 mb-4" data-lang-key="return-desc">Click the "← Back to Dashboard" button above, or go to this link:</p>
+                    <a href="/" class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg" data-lang-key="go-to-dashboard">
+                        Go to Dashboard <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+
+                <div class="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
+                    <h3 class="text-lg font-semibold text-purple-300 mb-3"><i class="fas fa-cog"></i> <span data-lang-key="bot-manager-section">Go to "Telegram Bot Manager" Section</span></h3>
+                    <p class="text-gray-300 mb-3" data-lang-key="bot-manager-desc">On the right side of the main page, you will see a form called "Telegram Bot Manager". There:</p>
+                    
+                    <div class="space-y-4 ml-4">
+                        <div class="border-l-4 border-blue-500 pl-4 bg-blue-900/10 p-3 rounded">
+                            <p class="text-blue-400 font-semibold"><i class="fas fa-hashtag"></i> <span data-lang-key="api-id-field">API ID Field</span></p>
+                            <p class="text-gray-300 text-sm" data-lang-key="api-id-field-desc">Paste your copied API ID number</p>
+                            <p class="text-gray-500 text-xs mt-1" data-lang-key="example">Example: 12345678</p>
+                        </div>
+                        
+                        <div class="border-l-4 border-purple-500 pl-4 bg-purple-900/10 p-3 rounded">
+                            <p class="text-purple-400 font-semibold"><i class="fas fa-key"></i> <span data-lang-key="api-hash-field">API Hash Field</span></p>
+                            <p class="text-gray-300 text-sm" data-lang-key="api-hash-field-desc">Paste your copied API Hash code</p>
+                            <p class="text-gray-500 text-xs mt-1" data-lang-key="example">Example: 0123456789abcdef0123456789abcdef</p>
+                        </div>
+                        
+                        <div class="border-l-4 border-green-500 pl-4 bg-green-900/10 p-3 rounded">
+                            <p class="text-green-400 font-semibold"><i class="fas fa-phone"></i> <span data-lang-key="phone-field">Phone Number Field</span></p>
+                            <p class="text-gray-300 text-sm" data-lang-key="phone-field-desc">Enter your Telegram phone number (start with +)</p>
+                            <p class="text-gray-500 text-xs mt-1" data-lang-key="example">Example: +8801712345678</p>
+                        </div>
+                        
+                        <div class="border-l-4 border-yellow-500 pl-4 bg-yellow-900/10 p-3 rounded">
+                            <p class="text-yellow-400 font-semibold"><i class="fas fa-play-circle"></i> <span data-lang-key="start-bot-button">Start Bot Button</span></p>
+                            <p class="text-gray-300 text-sm" data-lang-key="start-bot-desc">Click the "Start Bot" button</p>
+                            <p class="text-gray-400 text-xs mt-1" data-lang-key="verification-note">
+                                <i class="fas fa-mobile-alt"></i> You will receive a Verification Code in your Telegram. If 2FA is enabled, you'll need to enter your password.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-green-900/30 border border-green-600/50 p-4 rounded-lg">
+                    <p class="text-green-300 font-semibold flex items-center gap-2">
+                        <i class="fas fa-check-circle text-green-400 text-xl"></i>
+                        <span data-lang-key="success-message">Success! Your Telegram Bot is now running!</span>
+                    </p>
+                    <p class="text-gray-300 text-sm mt-2" data-lang-key="success-desc">
+                        Your bot will now send and receive messages on your Telegram account.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="relative z-10 text-center py-6 mt-12">
+            <p class="text-gray-400 text-sm">
+                <i class="fab fa-telegram text-blue-400"></i> Join our channel: 
+                <a href="https://t.me/no_coder_xone" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">@no_coder_xone</a>
+                <span class="mx-2">•</span>
+                Dev: <a href="https://t.me/no_coder_pro" target="_blank" class="text-purple-400 hover:text-purple-300 transition-colors">@no_coder_pro</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('space-canvas');
+        const ctx = canvas.getContext('2d');
+        let starsArray = [];
+        const numberOfStars = 150;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.3;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initStars() {
+            starsArray = [];
+            for (let i = 0; i < numberOfStars; i++) {
+                starsArray.push(new Star());
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            starsArray.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            requestAnimationFrame(animateStars);
+        }
+
+        initStars();
+        animateStars();
+
+        const translations = {
+            en: {
+                'title': '📱 Telegram API Setup Tutorial',
+                'subtitle': 'How to get Telegram API ID and API Hash - Complete Guide',
+                'back-button': 'Back to Dashboard',
+                'video-title': 'Video Tutorial',
+                'video-not-supported': 'Your browser does not support video playback.',
+                'video-tip-label': 'Tip:',
+                'video-tip': 'Watch the video to understand the complete process, then follow the steps below.',
+                'steps-title': 'Step by Step Guide',
+                'step1-title': 'Visit Telegram Web',
+                'step1-desc': 'Open this link in your browser:',
+                'step2-title': 'Log In',
+                'step2-desc': 'Log in with your Telegram phone number. You\'ll receive a code in your Telegram app - enter that code.',
+                'important': 'Important:',
+                'step2-warning': 'If you have 2FA (Two-Factor Authentication) enabled on your Telegram account, you\'ll need to enter your password.',
+                'step3-title': 'Go to API Development Tools',
+                'step3-desc': 'After logging in, click on the',
+                'step3-desc2': 'option.',
+                'step4-title': 'Create New Application',
+                'step4-desc': 'Fill in the following information to create a new application:',
+                'step4-app-title': 'Any name (e.g., My Bot)',
+                'step4-short-name': 'Short name (e.g., mybot)',
+                'step4-platform': 'Select something (e.g., Desktop)',
+                'step4-description': '(Optional - you can leave it blank)',
+                'step4-note': 'Then click the "Create application" button.',
+                'step5-title': 'Copy API ID and API Hash',
+                'step5-desc': 'Once the application is created, you will see:',
+                'step5-api-id': 'A number (e.g., 12345678)',
+                'step5-api-hash': 'A long hex code (e.g., 0123456789abcdef0123456789abcdef)',
+                'security-warning-label': 'Security Warning:',
+                'security-warning': 'Never share this API ID and Hash with anyone! These are the keys to your Telegram account.',
+                'input-section-title': '✅ Where to Input Credentials?',
+                'return-to-main': 'Return to Main Page',
+                'return-desc': 'Click the "← Back to Dashboard" button above, or go to this link:',
+                'go-to-dashboard': 'Go to Dashboard',
+                'bot-manager-section': 'Go to "Telegram Bot Manager" Section',
+                'bot-manager-desc': 'On the right side of the main page, you will see a form called "Telegram Bot Manager". There:',
+                'api-id-field': 'API ID Field',
+                'api-id-field-desc': 'Paste your copied API ID number',
+                'example': 'Example:',
+                'api-hash-field': 'API Hash Field',
+                'api-hash-field-desc': 'Paste your copied API Hash code',
+                'phone-field': 'Phone Number Field',
+                'phone-field-desc': 'Enter your Telegram phone number (start with +)',
+                'start-bot-button': 'Start Bot Button',
+                'start-bot-desc': 'Click the "Start Bot" button',
+                'verification-note': 'You will receive a Verification Code in your Telegram. If 2FA is enabled, you\'ll need to enter your password.',
+                'success-message': 'Success! Your Telegram Bot is now running!',
+                'success-desc': 'Your bot will now send and receive messages on your Telegram account.'
+            },
+            bn: {
+                'title': '📱 Telegram API সেটআপ টিউটোরিয়াল',
+                'subtitle': 'কিভাবে Telegram API ID এবং API Hash পাবেন - সম্পূর্ণ গাইড',
+                'back-button': 'মূল পেজে ফিরে যান',
+                'video-title': 'ভিডিও টিউটোরিয়াল',
+                'video-not-supported': 'আপনার ব্রাউজার ভিডিও সাপোর্ট করে না।',
+                'video-tip-label': 'টিপ:',
+                'video-tip': 'ভিডিওটি দেখে সম্পূর্ণ প্রক্রিয়া বুঝে নিন, তারপর নিচের স্টেপগুলো অনুসরণ করুন।',
+                'steps-title': 'স্টেপ বাই স্টেপ গাইড',
+                'step1-title': 'Telegram Web-এ যান',
+                'step1-desc': 'আপনার ব্রাউজারে এই লিঙ্কটি ওপেন করুন:',
+                'step2-title': 'লগইন করুন',
+                'step2-desc': 'আপনার Telegram ফোন নম্বর দিয়ে লগইন করুন। আপনার Telegram অ্যাপে একটি কোড আসবে, সেটি এন্টার করুন।',
+                'important': 'গুরুত্বপূর্ণ:',
+                'step2-warning': 'আপনার Telegram অ্যাকাউন্টে 2FA (Two-Factor Authentication) চালু থাকলে পাসওয়ার্ড লাগবে।',
+                'step3-title': 'API Development Tools-এ যান',
+                'step3-desc': 'লগইন করার পর,',
+                'step3-desc2': 'অপশনে ক্লিক করুন।',
+                'step4-title': 'নতুন Application তৈরি করুন',
+                'step4-desc': 'একটি নতুন অ্যাপ্লিকেশন তৈরি করতে নিচের তথ্যগুলো পূরণ করুন:',
+                'step4-app-title': 'যেকোনো নাম (যেমন: My Bot)',
+                'step4-short-name': 'ছোট নাম (যেমন: mybot)',
+                'step4-platform': 'অন্য কিছু সিলেক্ট করুন (যেমন: Desktop)',
+                'step4-description': '(অপশনাল - খালি রাখতে পারেন)',
+                'step4-note': 'এরপর "Create application" বাটনে ক্লিক করুন।',
+                'step5-title': 'API ID এবং API Hash কপি করুন',
+                'step5-desc': 'অ্যাপ্লিকেশন তৈরি হয়ে গেলে আপনি দেখতে পাবেন:',
+                'step5-api-id': 'একটি নম্বর (যেমন: 12345678)',
+                'step5-api-hash': 'একটি লম্বা হেক্স কোড (যেমন: 0123456789abcdef0123456789abcdef)',
+                'security-warning-label': 'সিকিউরিটি সতর্কতা:',
+                'security-warning': 'এই API ID এবং Hash কখনও কারো সাথে শেয়ার করবেন না! এগুলো আপনার Telegram অ্যাকাউন্টের চাবি।',
+                'input-section-title': '✅ এখন কোথায় কি ইনপুট দিবেন?',
+                'return-to-main': 'মূল পেজে ফিরে যান',
+                'return-desc': 'উপরের "← মূল পেজে ফিরে যান" বাটনে ক্লিক করুন, অথবা এই লিঙ্কে যান:',
+                'go-to-dashboard': 'Dashboard-এ যান',
+                'bot-manager-section': '"Telegram Bot Manager" সেকশনে যান',
+                'bot-manager-desc': 'মূল পেজের ডান পাশে "Telegram Bot Manager" নামে একটি ফর্ম দেখবেন। সেখানে:',
+                'api-id-field': 'API ID ফিল্ডে',
+                'api-id-field-desc': 'আপনার কপি করা API ID নম্বরটি পেস্ট করুন',
+                'example': 'উদাহরণ:',
+                'api-hash-field': 'API Hash ফিল্ডে',
+                'api-hash-field-desc': 'আপনার কপি করা API Hash কোডটি পেস্ট করুন',
+                'phone-field': 'Phone Number ফিল্ডে',
+                'phone-field-desc': 'আপনার Telegram ফোন নম্বর দিন (+ দিয়ে শুরু)',
+                'start-bot-button': 'Start Bot বাটন',
+                'start-bot-desc': '"Start Bot" বাটনে ক্লিক করুন',
+                'verification-note': 'আপনার Telegram-এ একটি Verification Code আসবে। 2FA চালু থাকলে পাসওয়ার্ড দিতে হবে।',
+                'success-message': 'সফল! আপনার Telegram Bot এখন চলছে!',
+                'success-desc': 'এখন আপনার বট আপনার Telegram অ্যাকাউন্টে মেসেজ পাঠাতে এবং গ্রহণ করতে পারবে।'
+            }
+        };
+
+        function switchLanguage(lang) {
+            document.querySelectorAll('[data-lang-key]').forEach(element => {
+                const key = element.getAttribute('data-lang-key');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+            localStorage.setItem('preferred_language', lang);
+        }
+
+        function setLanguage(lang) {
+            document.getElementById('language-switcher').value = lang;
+            switchLanguage(lang);
+            document.getElementById('language-modal').classList.add('hidden');
+        }
+
+        const savedLang = localStorage.getItem('preferred_language');
+        if (!savedLang) {
+            document.getElementById('language-modal').classList.remove('hidden');
+        } else {
+            setLanguage(savedLang);
+        }
+    </script>
+</body>
+</html>
