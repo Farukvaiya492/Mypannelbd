@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Userbot Manager • Control Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #0f172a; 
+            min-height: 100vh;
+            margin: 0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #space-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; 
+            background: linear-gradient(to bottom, #020617 0%, #1e1b4b 100%);
+        }
+
+        .terminal { font-family: 'Fira Code', monospace; font-size: 0.925rem; line-height: 1.5; letter-spacing: 0.5px; }
+        .scroll-container { max-height: 520px; overflow-y: auto; background: #0a0e17; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
+        .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(148, 163, 184, 0.1); }
+        .glow-text { text-shadow: 0 0 15px rgba(74, 222, 128, 0.6); }
+        .status-card { transition: all 0.3s ease; }
+        .status-card:hover { transform: translateY(-2px); }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="text-gray-100">
+
+    <canvas id="space-canvas"></canvas>
+
+    <div class="max-w-7xl mx-auto p-5 md:p-8 relative z-10">
+
+        <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <a href="/" class="inline-flex items-center gap-2 text-gray-400 hover:text-green-400 transition-all duration-300 group">
+                <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
+                <span class="font-medium">Dashboard</span>
+            </a>
+
+            <div class="flex items-center gap-5 text-sm bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50 backdrop-blur-md">
+                <div id="connection-status" class="flex items-center gap-2 border-r border-gray-600 pr-4">
+                    <span class="inline-block w-2 h-2 bg-orange-400 rounded-full"></span>
+                    <span class="text-orange-400 font-medium">Connecting...</span>
+                </div>
+                <div class="flex items-center gap-2 text-blue-300 font-mono">
+                    <i class="fas fa-network-wired text-xs"></i>
+                    <span id="ping-display">Ping: <span class="text-gray-400">--ms</span></span>
+                </div>
+            </div>
+        </div>
+
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent glow-text">
+                Userbot Manager
+            </h1>
+            <p class="text-gray-400 mt-3 text-lg">Advanced Pyrogram Control • Live Terminal • Bot Management</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+
+            <div class="xl:col-span-2">
+                <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
+                    <div class="bg-gradient-to-r from-slate-800/80 to-slate-900/80 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                        <h2 class="text-xl font-bold flex items-center gap-3">
+                            <i class="fas fa-terminal text-blue-400"></i>
+                            <span class="text-blue-300">Live Terminal</span>
+                        </h2>
+                        <span class="text-xs bg-slate-800 px-2 py-1 rounded text-gray-400 border border-slate-600">bash/python</span>
+                    </div>
+
+                    <div id="terminal-output" class="terminal scroll-container rounded-b-lg p-5 min-h-96">
+                        <pre id="output-content" class="text-green-400">Initializing Userbot Interface...
+[System] Interface loaded.
+Connecting to server...</pre>
+                    </div>
+
+                    <div class="p-5 border-t border-slate-700 bg-slate-900/50">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="text-green-400 font-bold text-lg">$</span>
+                            <input type="text" id="command-input" class="flex-1 bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Type command...">
+                        </div>
+                        <div class="flex gap-3">
+                            <button onclick="executeCommand()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2">
+                                <i class="fas fa-play"></i> Execute
+                            </button>
+                            <button onclick="interruptProcess()" class="bg-red-600/80 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-red-500/25">
+                                <i class="fas fa-stop"></i> Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xl:col-span-1">
+                <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-purple-700/30">
+                    <div class="bg-gradient-to-r from-purple-900/40 to-pink-900/40 px-6 py-4 border-b border-purple-700/50">
+                        <h2 class="text-xl font-bold flex items-center gap-3">
+                            <i class="fas fa-cogs text-purple-300"></i>
+                            <span class="text-purple-300">Bot Configuration</span>
+                        </h2>
+                    </div>
+
+                    <div class="p-6 space-y-5">
+                        
+                        <div class="mb-4 bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg">
+                            <p class="text-blue-300 text-sm mb-2">
+                                <i class="fas fa-info-circle"></i> Don't know how to get API ID and Hash?
+                            </p>
+                            <a href="/tutorial" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 w-full text-center">
+                                <i class="fas fa-external-link-alt"></i> View Complete Tutorial
+                            </a>
+                        </div>
+                        
+                        <form id="bot-form" class="space-y-4">
+                            <div class="space-y-2">
+                                <label class="text-xs text-gray-400 ml-1 uppercase font-semibold tracking-wider">Credentials</label>
+                                <input type="text" id="api_id" placeholder="API ID" required class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
+                                <input type="text" id="api_hash" placeholder="API Hash" required class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
+                                <input type="text" id="phone_number" placeholder="Phone Number (+880...)" required class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
+                            </div>
+
+                            <div id="auth-fields" class="space-y-4 hidden pt-4 border-t border-gray-700">
+                                <p class="text-yellow-400 text-sm"><i class="fas fa-exclamation-triangle"></i> Verification Required</p>
+                                <input type="text" id="verification_code" placeholder="Telegram Code (1-2-3-4-5)" class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
+                                <input type="password" id="password" placeholder="2FA Password (if enabled)" class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
+                            </div>
+
+                            <div class="flex gap-3 pt-2">
+                                <button type="submit" id="start-btn" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/30 flex items-center justify-center gap-2">
+                                    <i class="fas fa-save"></i> Save & Start
+                                </button>
+                                <button type="button" onclick="stopBot()" class="flex-1 bg-gradient-to-r from-red-600 to-pink-700 hover:from-red-500 hover:to-pink-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/30">
+                                    <i class="fas fa-square"></i> Stop
+                                </button>
+                            </div>
+                        </form>
+
+                        <div id="bot-status" class="mt-6">
+                            <h3 class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                                <i class="fas fa-chart-line text-blue-400"></i> Current Bot Status
+                            </h3>
+                            <div id="status-list" class="space-y-3 bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                                <p class="text-gray-400 text-sm">No bots running.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="relative z-10 text-center py-6 mt-12">
+        <p class="text-gray-400 text-sm">
+            <i class="fab fa-telegram text-blue-400"></i> Join our channel: 
+            <a href="https://t.me/no_coder_xone" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">@no_coder_xone</a>
+            <span class="mx-2">•</span>
+            Dev: <a href="https://t.me/no_coder_pro" target="_blank" class="text-red-400 hover:text-purple-300 transition-colors">@no_coder_pro</a><span class="mx-2">•</span>
+            Mod: <a href="https://t.me/BotCoderBD" target="_blank" class="text-purple-400 hover:text-purple-300 transition-colors">@BotCoderBD</a>
+        </p>
+    </footer>
+
+    <script>
+        const canvas = document.getElementById('space-canvas');
+        const ctx = canvas.getContext('2d');
+        let starsArray = [];
+        const numberOfStars = 150; 
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2; 
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.3;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0) this.x = canvas.width;
+                if (this.x > canvas.width) this.x = 0;
+                if (this.y < 0) this.y = canvas.height;
+                if (this.y > canvas.height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initStars() {
+            starsArray = [];
+            for (let i = 0; i < numberOfStars; i++) {
+                starsArray.push(new Star());
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            starsArray.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            requestAnimationFrame(animateStars);
+        }
+
+        initStars();
+        animateStars();
+
+        const socket = io();
+        const outputElement = document.getElementById('output-content');
+        const inputElement = document.getElementById('command-input');
+        const formElement = document.getElementById('bot-form');
+        const authFields = document.getElementById('auth-fields');
+        const statusListElement = document.getElementById('status-list');
+        const connectionStatus = document.getElementById('connection-status');
+        const pingDisplay = document.getElementById('ping-display');
+
+        let lastPingTime = Date.now();
+
+        function updateConnectionStatusUI(isConnected, ping = null) {
+            let statusHtml;
+            let statusColor = isConnected ? 'green' : 'orange';
+            let statusText = isConnected ? 'System Connected' : 'Disconnected';
+
+            statusHtml = `<span class="inline-block w-2 h-2 bg-${statusColor}-400 rounded-full ${isConnected ? 'animate-pulse' : ''}"></span><span class="text-${statusColor}-400 font-medium">${statusText}</span>`;
+            connectionStatus.innerHTML = statusHtml;
+
+            if (ping !== null) {
+                const pingColor = ping < 100 ? 'green' : ping < 300 ? 'yellow' : 'red';
+                pingDisplay.innerHTML = `Ping: <span class="text-${pingColor}-400">${ping}ms</span>`;
+            }
+        }
+
+        socket.on('connect', function() {
+            updateConnectionStatusUI(true);
+            appendOutput('\n[System] Connected to server.\n🚀 Web Terminal Connected! Use the forms to manage the Telegram Bot.\n');
+            lastPingTime = Date.now();
+        });
+
+        socket.on('disconnect', function() {
+            updateConnectionStatusUI(false);
+            appendOutput('\n[System] Disconnected from server.\n');
+        });
+
+        socket.on('pong', function() {
+            const ping = Date.now() - lastPingTime;
+            updateConnectionStatusUI(true, ping);
+        });
+
+        setInterval(() => {
+            lastPingTime = Date.now();
+            socket.emit('ping');
+        }, 3000);
+
+        function appendOutput(data) {
+            outputElement.textContent += data.replace(/\r?\n/g, '\n');
+            const container = document.getElementById('terminal-output');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        socket.on('output', function(msg) {
+            appendOutput(msg.data);
+        });
+
+        socket.on('bot_management_result', function(result) {
+            appendOutput(`\n[Manager] ${result.status.toUpperCase()} - ${result.message}\n`);
+            
+            if (result.status === 'code_sent' || result.status === 'password_required') {
+                authFields.classList.remove('hidden');
+            } else {
+                document.getElementById('verification_code').value = '';
+                document.getElementById('password').value = '';
+                authFields.classList.add('hidden');
+            }
+            fetchBotStatus();
+        });
+
+        inputElement.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                executeCommand();
+            }
+        });
+
+        function executeCommand() {
+            const command = inputElement.value.trim();
+            if (command) {
+                appendOutput(`\n$ ${command}\n`);
+                socket.emit('execute', { command: command });
+                inputElement.value = '';
+            }
+        }
+
+        function interruptProcess() {
+            socket.emit('interrupt');
+        }
+
+        formElement.addEventListener('submit', function(e) {
+            e.preventDefault();
+            startBot();
+        });
+
+        async function startBot() {
+            const api_id = document.getElementById('api_id').value;
+            const api_hash = document.getElementById('api_hash').value;
+            const phone_number = document.getElementById('phone_number').value;
+            const verification_code = document.getElementById('verification_code').value;
+            const password = document.getElementById('password').value;
+
+            const payload = { api_id, api_hash, phone_number, verification_code, password };
+
+            appendOutput(`\n[Manager] Attempting to start bot for ${phone_number}...\n`);
+
+            try {
+                const response = await fetch('/api/bot/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                
+                if (result.status !== 'starting') {
+                    socket.emit('bot_management_result', result); 
+                }
+            } catch (error) {
+                appendOutput(`\n[Manager] Network Error: ${error.message}\n`);
+            }
+        }
+
+        async function stopBot() {
+            const api_id = document.getElementById('api_id').value;
+            const phone_number = document.getElementById('phone_number').value;
+
+            if (!api_id || !phone_number) {
+                 appendOutput('\n[Manager] Please enter API ID and Phone Number to identify the bot to stop.\n');
+                 return;
+            }
+
+            appendOutput(`\n[Manager] Attempting to stop bot for ${phone_number}...\n`);
+
+            try {
+                const response = await fetch('/api/bot/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_id, phone_number })
+                });
+                const result = await response.json();
+                if (result.status !== 'stopping') {
+                    socket.emit('bot_management_result', result);
+                }
+            } catch (error) {
+                appendOutput(`\n[Manager] Network Error: ${error.message}\n`);
+            }
+        }
+
+        async function fetchBotStatus() {
+            try {
+                const response = await fetch('/api/bot/status');
+                const data = await response.json();
+                statusListElement.innerHTML = '';
+                
+                if (data.bots.length === 0) {
+                    statusListElement.innerHTML = '<p class="text-gray-400 text-sm">No bots running.</p>';
+                    return;
+                }
+
+                data.bots.forEach(bot => {
+                    const statusDiv = document.createElement('div');
+                    statusDiv.className = 'status-card bg-gray-800 rounded-xl p-4 border-l-4 border-green-500 shadow-lg';
+                    
+                    const statusColor = bot.is_running ? 'green' : 'yellow';
+                    const statusText = bot.is_running ? 'Connected' : 'Starting';
+                    
+                    statusDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-bold text-gray-200">${bot.display_name}</h4>
+                                <p class="text-xs text-gray-500 mt-1">${bot.phone_number}</p>
+                            </div>
+                            <span class="px-2 py-1 bg-${statusColor}-900/30 text-${statusColor}-400 text-xs rounded border border-${statusColor}-800 flex items-center gap-1">
+                                <i class="fas fa-wifi"></i> ${statusText}
+                            </span>
+                        </div>
+                    `;
+                    
+                    statusListElement.appendChild(statusDiv);
+                });
+
+            } catch (error) {
+                statusListElement.innerHTML = `<p class="text-red-400 text-sm">Error: ${error.message}</p>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchBotStatus();
+            setInterval(fetchBotStatus, 5000); 
+        });
+    </script>
+</body>
+</html>
