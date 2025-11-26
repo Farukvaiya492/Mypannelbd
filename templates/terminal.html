@@ -1,1313 +1,623 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Userbot Manager • Advanced Control Panel</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Message Scan Bot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='//libtl.com/sdk.js' data-zone='9481095' data-sdk='show_9481095'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.4/lottie.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #0f172a; 
-            min-height: 100vh;
-            margin: 0;
-            overflow-x: hidden;
-            position: relative;
+        :root {
+            --primary: #2dd4bf;
+            --secondary: #4f46e5;
+            --surface: #0a0a0a;
+            --border: rgba(255, 255, 255, 0.1);
+            --red: #ef4444;
+            --danger-bg: #450a0a;
+            --danger-border: #991b1c;
         }
 
-        #space-canvas {
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: var(--surface);
+            font-family: 'Inter', sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        .header-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            background: rgba(45, 212, 191, 0.1);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            width: 100%;
+        }
+
+        .header-container a {
+            font-size: 2.5rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            background: none;
+            border: none;
+        }
+
+        .header-container a:hover {
+            color: #fff;
+        }
+
+        .comment-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--red);
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.1);
+            margin: 1rem auto;
+            position: relative;
+            overflow: hidden;
+            max-width: 720px;
+            width: calc(100% - 2rem);
+        }
+
+        .message-box {
+            width: calc(100% - 2rem);
+            max-width: 720px;
+            margin: 1rem auto;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #f8f8f8;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            word-wrap: break-word;
+        }
+
+        .message-box-header {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .spoiler-container {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px solid var(--danger-border);
+            border-radius: 8px;
+            background: var(--danger-bg);
+            min-height: 120px;
+        }
+
+        .spoiler-header {
+            font-weight: 600;
+            color: var(--red);
+            margin-bottom: 0.5rem;
+        }
+
+        .spoiler-content {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem;
+            border-radius: 6px;
+            user-select: none;
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 100px;
+        }
+
+        .spoiler-content.hidden {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 0;
+            overflow: hidden;
+            min-height: 100px;
+        }
+        
+        .spoiler-content.hidden::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(239, 68, 68, 0.5); 
+            z-index: 5;
+            transition: opacity 0.3s ease, background 0.3s ease;
+        }
+        
+        .spoiler-content .unlock-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            z-index: 6;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .spoiler-content.hidden .unlock-overlay {
+            display: flex;
+        }
+
+        .spoiler-content.hidden .unlock-overlay:active {
+            opacity: 0.7;
+        }
+
+        .spoiler-content .unlock-icon {
+            font-size: 3rem; 
+            margin-bottom: 5px;
+            color: white;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .spoiler-content .unlock-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .spoiler-content.loading .unlock-icon {
+            font-size: 2rem;
+        }
+        
+        .spoiler-content.loading .unlock-text {
+            color: white; 
+        }
+
+        .spoiler-content.loading::before {
+             background: rgba(239, 68, 68, 0.7); 
+        }
+        
+        .spoiler-content.hidden .spoiler-text {
+            filter: blur(8px);
+            opacity: 0.8; 
+            min-height: inherit;
+            padding: 0.75rem;
+        }
+
+        .spoiler-text {
+            transition: all 0.3s ease;
+            white-space: pre-wrap;
+            display: block;
+            padding: 0.75rem;
+            min-height: 100px; 
+        }
+        
+        .error-message {
+            color: var(--red);
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-text {
+            text-align: center;
+            color: var(--primary);
+            padding: 2rem;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            font-size: 0.85rem;
+            color: #71717a;
+            margin-top: auto;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border);
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .footer a:hover {
+            color: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                padding: 0.75rem 1rem;
+            }
+
+            .header-container a {
+                font-size: 1.5rem;
+                padding: 6px 12px;
+            }
+
+            .message-box {
+                padding: 1.5rem;
+                font-size: 1rem;
+                width: calc(100% - 1rem);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .message-box-header {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .container {
+            flex: 1;
+            padding: 6rem 1rem 2rem;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        #loading-screen {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; 
-            background: linear-gradient(to bottom, #020617 0%, #1e1b4b 100%);
+            background: var(--surface);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
         }
 
-        .terminal { font-family: 'Fira Code', monospace; font-size: 0.925rem; line-height: 1.5; letter-spacing: 0.5px; }
-        .scroll-container { max-height: 520px; overflow-y: auto; background: #0a0e17; border: 1px solid #1e293b; box-shadow: 0 10px 30px rgba(0,0,0,0.6); }
-        .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(148, 163, 184, 0.1); }
-        .glow-text { text-shadow: 0 0 15px rgba(74, 222, 128, 0.6); }
-        .status-card { transition: all 0.3s ease; }
-        .status-card:hover { transform: translateY(-2px); }
-        
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        .toggle-checkbox:checked + .toggle-label {
-            background-color: #10b981;
-        }
-        .toggle-checkbox:checked + .toggle-label .toggle-dot {
-            transform: translateX(1.5rem);
+        #sticker-container {
+            width: 150px;
+            height: 150px;
         }
 
-        .notification-enter {
-            transform: translateX(100%);
-        }
-        .notification-enter-active {
-            transform: translateX(0);
-            transition: transform 300ms ease-out;
-        }
-        .notification-exit-active {
-            transform: translateX(100%);
-            transition: transform 300ms ease-in;
+        #header-lottie {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: black;
+            padding: 4px;
         }
 
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
+        .search-container {
+            width: calc(100% - 2rem);
+            max-width: 720px;
+            margin: 1rem auto;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            text-align: center;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        .search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 16px;
+            margin: 1rem 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .search-input::placeholder {
+            color: #888;
+        }
+
+        .search-button {
+            padding: 12px 24px;
+            margin: 0.5rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary);
+            color: #000;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-button:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
         }
     </style>
 </head>
-<body class="text-gray-100">
+<body>
+    <div id="loading-screen">
+        <div id="sticker-container"></div>
+    </div>
 
-    <canvas id="space-canvas"></canvas>
+    <div class="header-container">
+        <div id="header-lottie"></div>
+        <a href="https://t.me/MessageScanBot" target="_blank">Message Scan Bot</a>
+    </div>
 
-    <div class="max-w-7xl mx-auto p-5 md:p-8 relative z-10">
+    <div class="container">
+        <div class="comment-tag">
+            <span id="sender-info">Loading sender information...</span>
+        </div>
 
-        <div class="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <a href="/" class="inline-flex items-center gap-2 text-gray-400 hover:text-green-400 transition-all duration-300 group">
-                <i class="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>
-                <span class="font-medium">Dashboard</span>
-            </a>
-
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-5 text-sm bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50 backdrop-blur-md">
-                    <div id="connection-status" class="flex items-center gap-2 border-r border-gray-600 pr-4">
-                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                        <span class="text-green-400 font-medium">System Connected</span>
-                    </div>
-                    <div class="flex items-center gap-2 text-blue-300 font-mono">
-                        <i class="fas fa-network-wired text-xs"></i>
-                        <span id="ping-display">Ping: --ms</span>
-                    </div>
-                </div>
-                
-                <button onclick="openSettings()" class="bg-slate-800/50 hover:bg-slate-700/50 p-2 rounded-full border border-slate-700/50 transition-all">
-                    <i class="fas fa-cog text-gray-400 hover:text-white"></i>
-                </button>
+        <div class="message-box" id="message-box">
+            <div class="message-box-header">
+                <h3>Message Scan Report</h3>
+            </div>
+            <div id="report-content">
+                <div class="loading-text">Loading report...</div>
             </div>
         </div>
 
-        <header class="text-center mb-10">
-            <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent glow-text">
-                Userbot Manager
-            </h1>
-            <p class="text-gray-400 mt-3 text-lg">Advanced Pyrogram Control • Multi-Account • Real-time Monitoring</p>
-        </header>
-
-        <!-- System Resources Monitoring -->
-        <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-cyan-700/30 mb-8">
-            <div class="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 px-6 py-4 border-b border-cyan-700/50">
-                <h2 class="text-xl font-bold flex items-center gap-3">
-                    <i class="fas fa-chart-line text-cyan-300"></i>
-                    <span class="text-cyan-300">System Monitoring</span>
-                </h2>
-            </div>
-            <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
-                    <div class="text-2xl font-bold text-green-400" id="cpu-usage">0%</div>
-                    <div class="text-xs text-gray-400 mt-1">CPU Usage</div>
-                </div>
-                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
-                    <div class="text-2xl font-bold text-blue-400" id="memory-usage">0 MB</div>
-                    <div class="text-xs text-gray-400 mt-1">Memory</div>
-                </div>
-                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
-                    <div class="text-2xl font-bold text-purple-400" id="active-bots">0</div>
-                    <div class="text-xs text-gray-400 mt-1">Active Bots</div>
-                </div>
-                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
-                    <div class="text-2xl font-bold text-yellow-400" id="total-uptime">00:00</div>
-                    <div class="text-xs text-gray-400 mt-1">Total Uptime</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-
-            <div class="xl:col-span-2">
-                <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-slate-700">
-                    <div class="bg-gradient-to-r from-slate-800/80 to-slate-900/80 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
-                        <h2 class="text-xl font-bold flex items-center gap-3">
-                            <i class="fas fa-terminal text-blue-400"></i>
-                            <span class="text-blue-300">Live Terminal</span>
-                        </h2>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs bg-slate-800 px-2 py-1 rounded text-gray-400 border border-slate-600">bash/python</span>
-                            <button onclick="clearTerminal()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-gray-400 border border-slate-600 transition-colors">
-                                <i class="fas fa-broom"></i> Clear
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Search Bar -->
-                    <div id="terminal-search-bar" class="p-3 border-b border-slate-700 bg-slate-800/50 flex gap-2 hidden">
-                        <input type="text" id="terminal-search" placeholder="Search in terminal..." 
-                            class="flex-1 bg-slate-700/50 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <button onclick="clearSearch()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-sm transition-colors">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div id="terminal-output" class="terminal scroll-container rounded-b-lg p-5 min-h-96">
-                        <pre id="output-content" class="text-green-400">Initializing Userbot Interface<span class="animate-pulse">...</span></pre>
-                    </div>
-
-                    <div class="p-5 border-t border-slate-700 bg-slate-900/50">
-                        <div class="flex items-center gap-3 mb-4">
-                            <span class="text-green-400 font-bold text-lg">$</span>
-                            <input type="text" id="command-input" 
-                                class="flex-1 bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-                                placeholder="Type command...">
-                        </div>
-                        <div class="flex gap-3">
-                            <button onclick="executeCommand()" 
-                                class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2">
-                                <i class="fas fa-play"></i> Execute
-                            </button>
-                            <button onclick="interruptProcess()" 
-                                class="bg-red-600/80 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-red-500/25">
-                                <i class="fas fa-stop"></i> Stop
-                            </button>
-                            <button onclick="toggleSearch()" 
-                                class="bg-gray-600/80 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition-all">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Actions -->
-                <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-emerald-700/30 mt-8">
-                    <div class="bg-gradient-to-r from-emerald-900/40 to-green-900/40 px-6 py-4 border-b border-emerald-700/50">
-                        <h2 class="text-xl font-bold flex items-center gap-3">
-                            <i class="fas fa-bolt text-emerald-300"></i>
-                            <span class="text-emerald-300">Quick Actions</span>
-                        </h2>
-                    </div>
-                    <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <button onclick="runPresetCommand('status')" 
-                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-green-400 group">
-                            <i class="fas fa-info-circle text-green-400 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-xs block mt-1">Check Status</span>
-                        </button>
-                        <button onclick="runPresetCommand('restart')" 
-                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-yellow-400 group">
-                            <i class="fas fa-redo text-yellow-400 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-xs block mt-1">Restart All</span>
-                        </button>
-                        <button onclick="runPresetCommand('logs')" 
-                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-blue-400 group">
-                            <i class="fas fa-scroll text-blue-400 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-xs block mt-1">Show Logs</span>
-                        </button>
-                        <button onclick="runPresetCommand('update')" 
-                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-purple-400 group">
-                            <i class="fas fa-sync text-purple-400 group-hover:scale-110 transition-transform"></i>
-                            <span class="text-xs block mt-1">Update</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="xl:col-span-1">
-                <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-purple-700/30">
-                    <div class="bg-gradient-to-r from-purple-900/40 to-pink-900/40 px-6 py-4 border-b border-purple-700/50">
-                        <h2 class="text-xl font-bold flex items-center gap-3">
-                            <i class="fas fa-cogs text-purple-300"></i>
-                            <span class="text-purple-300">Bot Configuration</span>
-                        </h2>
-                    </div>
-
-                    <div class="p-6 space-y-5">
-                        
-                        <div id="saved-accounts-container" class="hidden animate-fade-in-down">
-                            <label class="text-xs text-blue-400 ml-1 uppercase font-semibold tracking-wider flex justify-between">
-                                <span>Saved Accounts</span>
-                                <span class="cursor-pointer hover:text-red-400" onclick="clearHistory()">Clear All</span>
-                            </label>
-                            <div class="relative mt-1">
-                                <select id="saved-accounts-select" onchange="loadFromHistory(this.value)" 
-                                    class="w-full bg-slate-800/90 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-600 appearance-none cursor-pointer">
-                                    <option value="">Select a saved account...</option>
-                                </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
-                                    <i class="fas fa-chevron-down text-xs"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        <form id="bot-form" class="space-y-4">
-                            <div class="space-y-2">
-                                <label class="text-xs text-gray-400 ml-1 uppercase font-semibold tracking-wider">Credentials</label>
-                                <input type="text" id="api_id" placeholder="API ID" required
-                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
-                                <input type="text" id="api_hash" placeholder="API Hash" required
-                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
-                                <input type="text" id="phone_number" placeholder="Phone Number (+880...)" required
-                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
-                            </div>
-
-                            <div id="auth-fields" class="space-y-4 hidden pt-4 border-t border-gray-700">
-                                <p class="text-yellow-400 text-sm"><i class="fas fa-exclamation-triangle"></i> Verification Required</p>
-                                <input type="text" id="verification_code" placeholder="Telegram Code (1-2-3-4-5)"
-                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
-                                <input type="password" id="password" placeholder="2FA Password (if enabled)"
-                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
-                            </div>
-
-                            <div class="flex gap-3 pt-2">
-                                <button type="submit" id="start-btn"
-                                    class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/30 flex items-center justify-center gap-2">
-                                    <i class="fas fa-save"></i> Save & Start
-                                </button>
-                                <button type="button" onclick="stopBot()"
-                                    class="flex-1 bg-gradient-to-r from-red-600 to-pink-700 hover:from-red-500 hover:to-pink-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/30">
-                                    <i class="fas fa-square"></i> Stop
-                                </button>
-                            </div>
-
-                            <!-- Session Reset Button -->
-                            <div class="flex gap-2 pt-2">
-                                <button type="button" onclick="resetSession()"
-                                    class="flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-500 hover:to-amber-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-orange-500/30 flex items-center justify-center gap-2">
-                                    <i class="fas fa-sync-alt"></i> Reset Session
-                                </button>
-                            </div>
-                        </form>
-
-                        <!-- Bulk Operations -->
-                        <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700">
-                            <h3 class="text-sm font-semibold text-gray-400 mb-3">Bulk Operations</h3>
-                            <div class="grid grid-cols-2 gap-2">
-                                <button onclick="bulkOperation('start')" 
-                                    class="bg-green-600/20 hover:bg-green-600/30 border border-green-600 text-green-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
-                                    <i class="fas fa-play"></i> Start All
-                                </button>
-                                <button onclick="bulkOperation('stop')" 
-                                    class="bg-red-600/20 hover:bg-red-600/30 border border-red-600 text-red-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
-                                    <i class="fas fa-stop"></i> Stop All
-                                </button>
-                                <button onclick="bulkOperation('restart')" 
-                                    class="bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600 text-yellow-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
-                                    <i class="fas fa-redo"></i> Restart All
-                                </button>
-                                <button onclick="exportAccounts()" 
-                                    class="bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600 text-purple-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
-                                    <i class="fas fa-download"></i> Export
-                                </button>
-                            </div>
-                        </div>
-
-                        <div id="bot-status">
-                            <div class="flex justify-between items-center mb-3">
-                                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Current Status</h3>
-                                <div class="flex gap-1">
-                                    <button onclick="filterBots('all')" class="px-2 py-1 bg-blue-500 text-white rounded-full text-xs transition-all">All</button>
-                                    <button onclick="filterBots('running')" class="px-2 py-1 bg-slate-600 hover:bg-green-500 text-gray-300 rounded-full text-xs transition-all">Running</button>
-                                    <button onclick="filterBots('stopped')" class="px-2 py-1 bg-slate-600 hover:bg-red-500 text-gray-300 rounded-full text-xs transition-all">Stopped</button>
-                                </div>
-                            </div>
-                            <div id="status-list" class="space-y-3">
-                                <div class="bg-gray-800/40 rounded-lg p-4 text-center border border-gray-700 border-dashed">
-                                    <span class="text-gray-500 text-sm">Waiting for connection...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="search-container" id="search-container" style="display: none;">
+            <h3>Search Report</h3>
+            <p>Enter a report ID to view the scan results:</p>
+            <input type="text" id="search-input" class="search-input" placeholder="Enter report ID..." />
+            <br>
+            <button onclick="searchReport()" class="search-button" id="search-btn">Search Report</button>
         </div>
     </div>
 
-    <!-- Settings Panel -->
-    <div id="settings-panel" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50">
-        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl">
-            <div class="glass rounded-2xl border border-slate-600 m-4">
-                <div class="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-4 border-b border-slate-600 flex justify-between items-center">
-                    <h2 class="text-xl font-bold text-white">Settings</h2>
-                    <button onclick="closeSettings()" class="text-gray-400 hover:text-white">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                <div class="p-6 max-h-96 overflow-y-auto">
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-300 mb-3">Terminal Settings</h3>
-                            <div class="space-y-3">
-                                <label class="flex items-center justify-between cursor-pointer">
-                                    <span class="text-gray-400">Auto-scroll terminal</span>
-                                    <div class="relative inline-block w-12 h-6">
-                                        <input type="checkbox" id="auto-scroll" checked class="toggle-checkbox hidden">
-                                        <label for="auto-scroll" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
-                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
-                                        </label>
-                                    </div>
-                                </label>
-                                <label class="flex items-center justify-between cursor-pointer">
-                                    <span class="text-gray-400">Show timestamps</span>
-                                    <div class="relative inline-block w-12 h-6">
-                                        <input type="checkbox" id="show-timestamps" class="toggle-checkbox hidden">
-                                        <label for="show-timestamps" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
-                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
-                                        </label>
-                                    </div>
-                                </label>
-                                <label class="flex items-center justify-between cursor-pointer">
-                                    <span class="text-gray-400">Save command history</span>
-                                    <div class="relative inline-block w-12 h-6">
-                                        <input type="checkbox" id="save-history" checked class="toggle-checkbox hidden">
-                                        <label for="save-history" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
-                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
-                                        </label>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-300 mb-3">Theme Customization</h3>
-                            <div class="grid grid-cols-3 gap-3">
-                                <button onclick="changeTheme('default')" class="bg-slate-700 p-3 rounded-lg border-2 border-blue-500">
-                                    <div class="h-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded"></div>
-                                    <span class="text-xs text-gray-400 mt-1">Default</span>
-                                </button>
-                                <button onclick="changeTheme('green')" class="bg-slate-700 p-3 rounded-lg border border-slate-600">
-                                    <div class="h-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded"></div>
-                                    <span class="text-xs text-gray-400 mt-1">Green</span>
-                                </button>
-                                <button onclick="changeTheme('red')" class="bg-slate-700 p-3 rounded-lg border border-slate-600">
-                                    <div class="h-4 bg-gradient-to-r from-red-400 to-pink-400 rounded"></div>
-                                    <span class="text-xs text-gray-400 mt-1">Red</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-300 mb-3">Notifications</h3>
-                            <div class="space-y-3">
-                                <label class="flex items-center justify-between cursor-pointer">
-                                    <span class="text-gray-400">Success notifications</span>
-                                    <div class="relative inline-block w-12 h-6">
-                                        <input type="checkbox" id="notif-success" checked class="toggle-checkbox hidden">
-                                        <label for="notif-success" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
-                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
-                                        </label>
-                                    </div>
-                                </label>
-                                <label class="flex items-center justify-between cursor-pointer">
-                                    <span class="text-gray-400">Error notifications</span>
-                                    <div class="relative inline-block w-12 h-6">
-                                        <input type="checkbox" id="notif-error" checked class="toggle-checkbox hidden">
-                                        <label for="notif-error" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
-                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
-                                        </label>
-                                    </div>
-                                </label>
-                                <label class="flex items-center justify-between cursor-pointer">
-                                    <span class="text-gray-400">Bot status changes</span>
-                                    <div class="relative inline-block w-12 h-6">
-                                        <input type="checkbox" id="notif-status" checked class="toggle-checkbox hidden">
-                                        <label for="notif-status" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
-                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
-                                        </label>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="px-6 py-4 border-t border-slate-600 flex justify-end gap-3">
-                    <button onclick="closeSettings()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
-                        Cancel
-                    </button>
-                    <button onclick="saveSettings()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors">
-                        Save Settings
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div class="footer">
+        <p>Powered by <a href="https://t.me/JSOrganization" target="_blank">JS Organization</a></p>
     </div>
 
     <script>
-        // ================= SPACE ANIMATION =================
-        const canvas = document.getElementById('space-canvas');
-        const ctx = canvas.getContext('2d');
-        let starsArray = [];
-        const numberOfStars = 150; 
+        let tg = window.Telegram.WebApp;
+        tg.setHeaderColor("#000000");
+        tg.setBackgroundColor("#000000");
+        tg.setBottomBarColor('#000000');
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+        let messageUnlocked = false;
 
-        class Star {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2; 
-                this.speedX = (Math.random() - 0.5) * 0.5;
-                this.speedY = (Math.random() - 0.5) * 0.5;
-                this.opacity = Math.random() * 0.5 + 0.3;
-            }
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x < 0) this.x = canvas.width;
-                if (this.x > canvas.width) this.x = 0;
-                if (this.y < 0) this.y = canvas.height;
-                if (this.y > canvas.height) this.y = 0;
-            }
-            draw() {
-                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-            }
+        function getReportId() {
+            const tgApp = window.Telegram.WebApp;
+            const startParam =
+                tgApp.initDataUnsafe?.start_param ||
+                new URLSearchParams(window.location.search).get("tgWebAppStartParam");
+            const reportId = startParam && startParam.startsWith("report_")
+                ? startParam.replace("report_", "")
+                : null;
+            return reportId;
         }
 
-        function initStars() {
-            starsArray = [];
-            for (let i = 0; i < numberOfStars; i++) {
-                starsArray.push(new Star());
-            }
-        }
-
-        function animateStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            starsArray.forEach(star => {
-                star.update();
-                star.draw();
-            });
-            requestAnimationFrame(animateStars);
-        }
-
-        initStars();
-        animateStars();
-        // ================= END SPACE ANIMATION =================
-
-
-        // ================= APP LOGIC =================
-        const socket = io();
-        const outputElement = document.getElementById('output-content');
-        const inputElement = document.getElementById('command-input');
-        const formElement = document.getElementById('bot-form');
-        const authFields = document.getElementById('auth-fields');
-        const statusListElement = document.getElementById('status-list');
-        const connectionStatus = document.getElementById('connection-status');
-        const pingDisplay = document.getElementById('ping-display');
-        const savedAccountsSelect = document.getElementById('saved-accounts-select');
-        const savedAccountsContainer = document.getElementById('saved-accounts-container');
-
-        // Command History
-        let commandHistory = [];
-        let historyIndex = -1;
-
-        // Settings
-        const settings = {
-            autoScroll: true,
-            showTimestamps: false,
-            saveHistory: true,
-            theme: 'default',
-            notifications: {
-                success: true,
-                error: true,
-                status: true
-            }
-        };
-
-        // --- PING ---
-        async function measurePing() {
-            const start = Date.now();
+        async function fetchReportData(reportId) {
             try {
-                await fetch(window.location.href, { method: 'HEAD', cache: 'no-cache' });
-                const latency = Date.now() - start;
-                let color = latency > 300 ? 'text-red-400' : latency > 150 ? 'text-yellow-400' : 'text-green-400';
-                pingDisplay.innerHTML = `Ping: <span class="${color}">${latency}ms</span>`;
-            } catch {
-                pingDisplay.innerHTML = `Ping: <span class="text-red-500">Timeout</span>`;
+                const response = await fetch(`https://botfather.cloud/Apis/MsgScanner/Pro/get.php?report_id=${reportId}`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching report data:', error);
+                return null;
             }
         }
-        setInterval(measurePing, 2000);
 
-        // --- SYSTEM MONITORING ---
-        function updateSystemMetrics() {
-            // Simulate system metrics (in real app, get from backend)
-            document.getElementById('cpu-usage').textContent = Math.floor(Math.random() * 30 + 10) + '%';
-            document.getElementById('memory-usage').textContent = Math.floor(Math.random() * 200 + 100) + ' MB';
-            
-            // Count active bots
-            const activeBots = document.querySelectorAll('.status-card').length;
-            document.getElementById('active-bots').textContent = activeBots;
-            
-            // Update total uptime
-            updateTotalUptime();
-        }
-
-        function updateTotalUptime() {
-            // This would calculate total uptime across all bots
-            document.getElementById('total-uptime').textContent = '24h 15m';
-        }
-
-        // --- NOTIFICATION SYSTEM ---
-        function showNotification(message, type = 'info', duration = 5000) {
-            if (!settings.notifications[type] && type !== 'info') return;
-
-            const notification = document.createElement('div');
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-exclamation-circle',
-                warning: 'fa-exclamation-triangle',
-                info: 'fa-info-circle'
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
             };
-            const colors = {
-                success: 'text-green-400 border-green-500',
-                error: 'text-red-400 border-red-500',
-                warning: 'text-yellow-400 border-yellow-500',
-                info: 'text-blue-400 border-blue-500'
-            };
-            
-            notification.className = `fixed top-4 right-4 glass border-l-4 ${colors[type]} p-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 max-w-sm notification-enter`;
-            notification.innerHTML = `
-                <div class="flex items-center gap-3">
-                    <i class="fas ${icons[type]}"></i>
-                    <span class="text-sm">${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.remove('translate-x-full');
-                notification.classList.add('notification-enter-active');
-            }, 100);
-            
-            setTimeout(() => {
-                notification.classList.remove('notification-enter-active');
-                notification.classList.add('translate-x-full');
-                setTimeout(() => {
-                    if (document.body.contains(notification)) {
-                        document.body.removeChild(notification);
-                    }
-                }, 300);
-            }, duration);
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        // --- COMMAND HISTORY ---
-        function loadCommandHistory() {
-            const saved = localStorage.getItem('commandHistory');
-            if (saved) {
-                commandHistory = JSON.parse(saved);
-            }
-        }
+        function displayReportData(response) {
+            const senderInfo = document.getElementById('sender-info');
+            const reportContent = document.getElementById('report-content');
 
-        function saveCommandHistory() {
-            if (settings.saveHistory) {
-                localStorage.setItem('commandHistory', JSON.stringify(commandHistory));
-            }
-        }
-
-        function addToHistory(command) {
-            if (command.trim() && !commandHistory.includes(command)) {
-                commandHistory.unshift(command);
-                if (commandHistory.length > 50) commandHistory.pop();
-                saveCommandHistory();
-            }
-            historyIndex = -1;
-        }
-
-        // --- TERMINAL SEARCH ---
-        function toggleSearch() {
-            const searchBar = document.getElementById('terminal-search-bar');
-            if (searchBar.classList.contains('hidden')) {
-                searchBar.classList.remove('hidden');
-                document.getElementById('terminal-search').focus();
-            } else {
-                searchBar.classList.add('hidden');
-            }
-        }
-
-        function clearSearch() {
-            document.getElementById('terminal-search').value = '';
-            // Remove search highlights
-            const output = document.getElementById('output-content');
-            output.innerHTML = output.innerHTML.replace(/<mark class="bg-yellow-500 text-black">|<\/mark>/g, '');
-        }
-
-        function performSearch() {
-            const searchTerm = document.getElementById('terminal-search').value;
-            if (!searchTerm) {
-                clearSearch();
+            if (!response || response.status !== 'success' || !response.data) {
+                senderInfo.textContent = 'Error loading sender information';
+                reportContent.innerHTML = '<div class="error-message">Failed to load report data</div>';
                 return;
             }
 
-            const output = document.getElementById('output-content');
-            const content = output.textContent;
-            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-            const highlighted = content.replace(regex, '<mark class="bg-yellow-500 text-black">$1</mark>');
-            output.innerHTML = highlighted;
-        }
+            const data = response.data;
+            senderInfo.textContent = `Message Sender: ${data.sender || 'Unknown Sender'}`;
 
-        // --- BULK OPERATIONS ---
-        async function bulkOperation(action) {
-            showNotification(`Starting ${action} operation on all bots...`, 'info');
+            let contentHtml = '';
             
-            try {
-                // First check if backend is responding
-                const testRes = await fetch('/api/bot/status');
-                if (!testRes.ok) {
-                    throw new Error('Backend server not responding properly');
-                }
-
-                const res = await fetch(`/api/bot/${action}-all`, { 
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin'
-                });
-                
-                // Check if response is JSON
-                const contentType = res.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await res.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
-                }
-                
-                const result = await res.json();
-                
-                if (result.success) {
-                    showNotification(`${action} operation completed successfully`, 'success');
-                    fetchBotStatus();
-                } else {
-                    showNotification(`Failed to ${action} bots: ${result.message}`, 'error');
-                }
-            } catch (err) {
-                console.error('Bulk operation error:', err);
-                showNotification(`Error during ${action} operation: ${err.message}`, 'error');
-                appendOutput(`\n[Error] ${action} operation failed: ${err.message}\n`);
-            }
-        }
-
-        function exportAccounts() {
-            const history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
-            if (history.length === 0) {
-                showNotification('No accounts to export', 'warning');
-                return;
+            if (data.comments) {
+                contentHtml += `<p><strong>Comment:</strong> ${escapeHtml(data.comments)}</p>`;
             }
 
-            const dataStr = JSON.stringify(history, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = 'userbot_accounts_backup.json';
-            link.click();
-            
-            showNotification('Accounts exported successfully', 'success');
-        }
-
-        // --- SESSION RESET ---
-        async function resetSession() {
-            const phone = document.getElementById('phone_number').value.trim();
-            if (!phone) {
-                showNotification('Please enter a phone number first', 'warning');
-                return;
+            if (data.category) {
+                contentHtml += `<p><strong>Category:</strong> ${escapeHtml(data.category)}</p>`;
             }
 
-            if (!confirm(`Are you sure you want to reset session for ${phone}? This will force a fresh login.`)) {
-                return;
-            }
-
-            appendOutput(`\n[Manager] Resetting session for ${phone}...\n`);
-            showNotification(`Resetting session for ${phone}`, 'info');
-
-            try {
-                // First stop the bot if running
-                await stopBot();
-                
-                // Wait a moment
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-                // Call session reset API
-                const res = await fetch('/api/bot/reset-session', { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ phone_number: phone }) 
-                });
-
-                // Check if response is JSON
-                const contentType = res.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await res.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
-                }
-
-                const result = await res.json();
-                
-                if (result.success) {
-                    showNotification('Session reset successfully. You can now login again.', 'success');
-                    appendOutput(`\n[Success] Session reset successfully for ${phone}\n`);
-                    
-                    // Clear verification fields
-                    document.getElementById('verification_code').value = '';
-                    document.getElementById('password').value = '';
-                    
-                    // Show auth fields for fresh login
-                    authFields.classList.remove('hidden');
-                    
-                } else {
-                    showNotification(`Failed to reset session: ${result.message}`, 'error');
-                    appendOutput(`\n[Error] Failed to reset session: ${result.message}\n`);
-                }
-                
-            } catch (err) {
-                console.error('Reset session error:', err);
-                appendOutput(`\n[Error] Failed to reset session: ${err.message}\n`);
-                showNotification(`Failed to reset session: ${err.message}`, 'error');
-            }
-        }
-
-        // --- AUTOMATIC SESSION RECOVERY ---
-        function handleAuthKeyDuplicated(error, phone) {
-            appendOutput(`\n[Critical] AUTH_KEY_DUPLICATED error detected for ${phone}\n`);
-            appendOutput(`[System] This usually happens when the same account is used in multiple places.\n`);
-            
-            showNotification('Session conflict detected. Attempting automatic recovery...', 'warning', 10000);
-            
-            // Ask user if they want to automatically reset the session
-            setTimeout(() => {
-                if (confirm('Session conflict detected! Do you want to reset the session and login again?')) {
-                    resetSession();
-                } else {
-                    appendOutput(`[System] Manual session reset required. Click "Reset Session" button when ready.\n`);
-                }
-            }, 2000);
-        }
-
-        // --- SETTINGS MANAGEMENT ---
-        function loadSettings() {
-            const saved = localStorage.getItem('userbot_settings');
-            if (saved) {
-                Object.assign(settings, JSON.parse(saved));
-            }
-            applySettings();
-        }
-
-        function saveSettings() {
-            // Update settings from UI
-            settings.autoScroll = document.getElementById('auto-scroll').checked;
-            settings.showTimestamps = document.getElementById('show-timestamps').checked;
-            settings.saveHistory = document.getElementById('save-history').checked;
-            
-            settings.notifications.success = document.getElementById('notif-success').checked;
-            settings.notifications.error = document.getElementById('notif-error').checked;
-            settings.notifications.status = document.getElementById('notif-status').checked;
-
-            localStorage.setItem('userbot_settings', JSON.stringify(settings));
-            applySettings();
-            closeSettings();
-            showNotification('Settings saved successfully', 'success');
-        }
-
-        function applySettings() {
-            // Apply settings to UI
-            document.getElementById('auto-scroll').checked = settings.autoScroll;
-            document.getElementById('show-timestamps').checked = settings.showTimestamps;
-            document.getElementById('save-history').checked = settings.saveHistory;
-            
-            document.getElementById('notif-success').checked = settings.notifications.success;
-            document.getElementById('notif-error').checked = settings.notifications.error;
-            document.getElementById('notif-status').checked = settings.notifications.status;
-
-            // Apply theme
-            document.documentElement.setAttribute('data-theme', settings.theme);
-        }
-
-        function openSettings() {
-            document.getElementById('settings-panel').classList.remove('hidden');
-        }
-
-        function closeSettings() {
-            document.getElementById('settings-panel').classList.add('hidden');
-        }
-
-        function changeTheme(theme) {
-            settings.theme = theme;
-            // Theme change logic would go here
-            showNotification(`Theme changed to ${theme}`, 'info');
-        }
-
-        // --- HISTORY ---
-        function updateHistoryUI() {
-            const history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
-            savedAccountsSelect.innerHTML = '<option value="">Select a saved account...</option>';
-            if (history.length > 0) {
-                savedAccountsContainer.classList.remove('hidden');
-                history.forEach((acc, i) => {
-                    const opt = document.createElement('option');
-                    opt.value = i;
-                    opt.textContent = `${acc.phone} (ID: ${acc.id})`;
-                    savedAccountsSelect.appendChild(opt);
-                });
-            } else {
-                savedAccountsContainer.classList.add('hidden');
-            }
-        }
-
-        function saveToHistory(id, hash, phone) {
-            let history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
-            history = history.filter(a => a.phone !== phone);
-            history.push({ id, hash, phone });
-            localStorage.setItem('userbot_history', JSON.stringify(history));
-            updateHistoryUI();
-        }
-
-        function loadFromHistory(i) {
-            if (i === "") return;
-            const history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
-            const acc = history[i];
-            if (acc) {
-                document.getElementById('api_id').value = acc.id;
-                document.getElementById('api_hash').value = acc.hash;
-                document.getElementById('phone_number').value = acc.phone;
-                appendOutput(`\n[System] Loaded credentials for ${acc.phone}\n`);
-            }
-        }
-
-        function clearHistory() {
-            if (confirm("Delete all saved accounts?")) {
-                localStorage.removeItem('userbot_history');
-                updateHistoryUI();
-                appendOutput(`\n[System] All saved accounts cleared.\n`);
-                showNotification('Account history cleared', 'info');
-            }
-        }
-
-        // --- UPTIME COUNTER (Persistent across refresh) ---
-        const uptimeIntervals = {}; // phone => interval ID
-
-        function formatUptime(ms) {
-            const totalSeconds = Math.floor(ms / 1000);
-            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-            const s = String(totalSeconds % 60).padStart(2, '0');
-            return `${h}h ${m}m ${s}s`;
-        }
-
-        function startUptimeCounter(phone) {
-            const key = `uptime_start_${phone}`;
-            let startTime = localStorage.getItem(key);
-
-            // If not exist, create now
-            if (!startTime) {
-                startTime = Date.now().toString();
-                localStorage.setItem(key, startTime);
-            } else {
-                startTime = parseInt(startTime);
-            }
-
-            // Clear previous interval if any
-            if (uptimeIntervals[phone]) clearInterval(uptimeIntervals[phone]);
-
-            const element = document.querySelector(`[data-uptime="${phone}"]`);
-            if (!element) return;
-
-            const update = () => {
-                const elapsed = Date.now() - startTime;
-                element.textContent = formatUptime(elapsed);
-            };
-            update();
-            uptimeIntervals[phone] = setInterval(update, 1000);
-        }
-
-        function stopUptimeCounter(phone) {
-            if (uptimeIntervals[phone]) {
-                clearInterval(uptimeIntervals[phone]);
-                delete uptimeIntervals[phone];
-            }
-            localStorage.removeItem(`uptime_start_${phone}`);
-        }
-
-        // --- OUTPUT ---
-        function appendOutput(data) {
-            if (settings.showTimestamps) {
-                const timestamp = new Date().toLocaleTimeString();
-                data = `[${timestamp}] ${data}`;
-            }
-            
-            outputElement.textContent += data.replace(/\r?\n/g, '\n');
-            
-            if (settings.autoScroll) {
-                const container = document.getElementById('terminal-output');
-                container.scrollTop = container.scrollHeight;
-            }
-        }
-
-        function clearTerminal() {
-            outputElement.textContent = '';
-            appendOutput('[System] Terminal cleared.\n');
-        }
-
-        // --- QUICK ACTIONS ---
-        function runPresetCommand(type) {
-            const commands = {
-                status: 'python -c "from your_bot_module import get_status; print(get_status())"',
-                restart: 'sudo systemctl restart userbot',
-                logs: 'tail -f /var/log/userbot.log',
-                update: 'git pull && pip install -r requirements.txt'
-            };
-            
-            if (commands[type]) {
-                inputElement.value = commands[type];
-                executeCommand();
-                showNotification(`Executing ${type} command`, 'info');
-            }
-        }
-
-        // --- BOT FILTERING ---
-        function filterBots(filter) {
-            const cards = document.querySelectorAll('.status-card');
-            cards.forEach(card => {
-                const isRunning = card.classList.contains('border-green-500');
-                
-                if (filter === 'all' || 
-                    (filter === 'running' && isRunning) || 
-                    (filter === 'stopped' && !isRunning)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
-
-        // --- SESSION CONFLICT PREVENTION ---
-        function preventSessionConflicts(phone) {
-            // Check if bot is already running with this phone
-            const runningBots = document.querySelectorAll('.status-card.border-green-500');
-            runningBots.forEach(bot => {
-                const botPhone = bot.querySelector('p.text-xs').textContent;
-                if (botPhone === phone) {
-                    if (!confirm(`Bot for ${phone} is already running. Starting another instance may cause session conflicts. Continue?`)) {
-                        throw new Error('Operation cancelled by user');
-                    }
-                }
-            });
-        }
-
-        // --- SOCKET ---
-        socket.on('connect', () => {
-            connectionStatus.innerHTML = `<span class="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span><span class="text-green-400 font-medium">System Connected</span>`;
-            appendOutput("\n[System] Connected to server.\n");
-            showNotification('Connected to server', 'success');
-        });
-
-        socket.on('disconnect', () => {
-            connectionStatus.innerHTML = `<span class="inline-block w-2 h-2 bg-orange-400 rounded-full"></span><span class="text-orange-400 font-medium">Disconnected</span>`;
-            showNotification('Disconnected from server', 'error');
-        });
-
-        socket.on('output', msg => appendOutput(msg.data));
-
-        socket.on('bot_management_result', result => {
-            appendOutput(`\n[Manager] ${result.status.toUpperCase()} - ${result.message}\n`);
-            
-            if (result.status === 'success') {
-                showNotification('Bot started successfully', 'success');
-            } else if (result.status === 'error') {
-                // Check for AUTH_KEY_DUPLICATED error
-                if (result.message.includes('AUTH_KEY_DUPLICATED') || result.message.includes('AuthKeyDuplicated')) {
-                    const phone = document.getElementById('phone_number').value.trim();
-                    handleAuthKeyDuplicated(result.message, phone);
-                } else {
-                    showNotification(`Bot error: ${result.message}`, 'error');
-                }
-            }
-            
-            if (result.status === 'code_sent' || result.status === 'password_required') {
-                authFields.classList.remove('hidden');
-                showNotification('Verification required', 'warning');
-            } else {
-                authFields.classList.add('hidden');
-                fetchBotStatus();
-            }
-        });
-
-        // --- COMMAND ---
-        inputElement.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                executeCommand();
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (historyIndex < commandHistory.length - 1) {
-                    historyIndex++;
-                    inputElement.value = commandHistory[historyIndex];
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    inputElement.value = commandHistory[historyIndex];
-                } else {
-                    historyIndex = -1;
-                    inputElement.value = '';
-                }
-            }
-        });
-
-        // Search functionality
-        document.getElementById('terminal-search').addEventListener('input', performSearch);
-
-        function executeCommand() {
-            const cmd = inputElement.value.trim();
-            if (cmd) {
-                appendOutput(`\n$ ${cmd}\n`);
-                socket.emit('execute', { command: cmd });
-                addToHistory(cmd);
-                inputElement.value = '';
-            }
-        }
-
-        function interruptProcess() { 
-            socket.emit('interrupt');
-            showNotification('Process interrupted', 'warning');
-        }
-
-        // --- START / STOP BOT ---
-        formElement.addEventListener('submit', e => { 
-            e.preventDefault(); 
-            const id = document.getElementById('api_id').value.trim();
-            const hash = document.getElementById('api_hash').value.trim();
-            const phone = document.getElementById('phone_number').value.trim();
-            saveToHistory(id, hash, phone);
-            startBot(); 
-        });
-
-        async function startBot() {
-            const payload = {
-                api_id: document.getElementById('api_id').value,
-                api_hash: document.getElementById('api_hash').value,
-                phone_number: document.getElementById('phone_number').value,
-                verification_code: document.getElementById('verification_code').value,
-                password: document.getElementById('password').value
-            };
-            
-            // Validation
-            if (!payload.api_id || !payload.api_hash || !payload.phone_number) {
-                showNotification('Please fill all required fields', 'warning');
-                return;
-            }
-
-            // Session conflict prevention
-            try {
-                preventSessionConflicts(payload.phone_number);
-            } catch (err) {
-                showNotification(err.message, 'warning');
-                return;
-            }
-
-            appendOutput(`\n[Manager] Starting bot for ${payload.phone_number}...\n`);
-            showNotification(`Starting bot for ${payload.phone_number}`, 'info');
-            
-            try {
-                const res = await fetch('/api/bot/start', { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify(payload) 
-                });
-
-                // Check if response is JSON
-                const contentType = res.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await res.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
-                }
-
-                const result = await res.json();
-                
-                if (result.status !== 'starting') {
-                    socket.emit('bot_management_result', result);
-                }
-                
-                if (result.success || result.status === 'success') {
-                    showNotification('Bot started successfully', 'success');
-                }
-                
-            } catch (err) {
-                console.error('Start bot error:', err);
-                appendOutput(`\n[Error] ${err.message}\n`);
-                
-                if (err.message.includes('HTML instead of JSON')) {
-                    showNotification('Backend API not available. Check server configuration.', 'error');
-                } else {
-                    showNotification(`Failed to start bot: ${err.message}`, 'error');
-                }
-            }
-        }
-
-        async function stopBot() {
-            const phone = document.getElementById('phone_number').value.trim();
-            if (!phone) {
-                showNotification('Please enter a phone number first', 'warning');
-                return;
-            }
-
-            appendOutput(`\n[Manager] Stopping bot ${phone}...\n`);
-            showNotification(`Stopping bot ${phone}`, 'info');
-            stopUptimeCounter(phone);
-            
-            try {
-                const res = await fetch('/api/bot/stop', { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ phone_number: phone }) 
-                });
-
-                // Check if response is JSON
-                const contentType = res.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await res.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
-                }
-
-                const result = await res.json();
-                
-                if (result.success) {
-                    showNotification(`Bot ${phone} stopped`, 'success');
-                    appendOutput(`\n[Success] Bot ${phone} stopped successfully\n`);
-                } else {
-                    showNotification(`Failed to stop bot: ${result.message}`, 'error');
-                    appendOutput(`\n[Error] Failed to stop bot: ${result.message}\n`);
-                }
-                
-                fetchBotStatus();
-            } catch (err) {
-                console.error('Stop bot error:', err);
-                appendOutput(`\n[Error] Failed to stop: ${err.message}\n`);
-                
-                // More specific error messages
-                if (err.message.includes('HTML instead of JSON')) {
-                    showNotification('Backend API not available. Check server configuration.', 'error');
-                } else if (err.message.includes('Failed to fetch')) {
-                    showNotification('Network error. Check server connection.', 'error');
-                } else {
-                    showNotification(`Failed to stop bot: ${err.message}`, 'error');
-                }
-            }
-        }
-
-        // --- STATUS UPDATE ---
-        async function fetchBotStatus() {
-            try {
-                const res = await fetch('/api/bot/status', {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    credentials: 'same-origin'
-                });
-
-                // Check if response is JSON
-                const contentType = res.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await res.text();
-                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
-                }
-
-                const data = await res.json();
-                statusListElement.innerHTML = '';
-
-                if (data.bots && data.bots.length === 0) {
-                    statusListElement.innerHTML = `<div class="bg-gray-800/40 rounded-lg p-4 text-center border border-gray-700 border-dashed"><span class="text-gray-500 text-sm">No active sessions</span></div>`;
-                    return;
-                }
-
-                // Rest of your existing code for displaying bots...
-                if (data.bots) {
-                    data.bots.forEach(bot => {
-                        const phone = bot.phone_number;
-                        const isRunning = bot.is_running;
-
-                        const card = document.createElement('div');
-                        card.className = `status-card bg-gray-800 rounded-xl p-4 border-l-4 ${isRunning ? 'border-green-500' : 'border-red-500'} shadow-lg fade-in`;
-
-                        const uptimeHtml = isRunning ? `
-                            <div class="mt-3 pt-3 border-t border-gray-700 flex justify-between items-center text-sm">
-                                <span class="text-gray-400"><i class="far fa-clock mr-1"></i> Uptime</span>
-                                <span data-uptime="${phone}" class="font-mono text-blue-400 font-bold">00h 00m 00s</span>
-                            </div>` : '';
-
-                        card.innerHTML = `
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-bold text-gray-200">${bot.display_name || 'Userbot'}</h4>
-                                    <p class="text-xs text-gray-500 mt-1">${phone}</p>
-                                </div>
-                                <span class="px-2 py-1 ${isRunning ? 'bg-green-900/30 text-green-400 border-green-800' : 'bg-red-900/30 text-red-400 border-red-800'} text-xs rounded border flex items-center gap-1">
-                                    <i class="fas ${isRunning ? 'fa-wifi' : 'fa-unlink'}"></i> ${isRunning ? 'Connected' : 'Stopped'}
-                                </span>
+            if (data.message) {
+                contentHtml += `
+                    <div class="spoiler-container">
+                        <div class="spoiler-header">Original Message:</div>
+                        <div class="spoiler-content hidden" onclick="revealMessage(this)">
+                            <div class="unlock-overlay" id="overlay-${data.id || 'default'}">
+                                <i class="fas fa-play-circle unlock-icon"></i>
+                                <span class="unlock-text">Watch Ad to Reveal Message</span>
                             </div>
-                            ${uptimeHtml}
-                        `;
-                        statusListElement.appendChild(card);
-
-                        if (isRunning) {
-                            startUptimeCounter(phone);
-                        } else {
-                            stopUptimeCounter(phone);
-                        }
-                    });
-                }
-
-                updateSystemMetrics();
-            } catch (err) {
-                console.error('Fetch status error:', err);
-                statusListElement.innerHTML = `
-                    <div class="bg-red-900/20 rounded-lg p-4 text-center border border-red-700">
-                        <span class="text-red-400 text-sm">Error fetching status: ${err.message}</span>
+                            <div class="spoiler-text">${escapeHtml(data.message)}</div>
+                        </div>
                     </div>
                 `;
             }
+
+            reportContent.innerHTML = contentHtml || '<div class="error-message">No report content available</div>';
         }
 
-        // --- INIT ---
-        document.addEventListener('DOMContentLoaded', () => {
-            loadSettings();
-            loadCommandHistory();
-            updateHistoryUI();
-            appendOutput("[System] Advanced Userbot Manager loaded.\n");
-            appendOutput("[System] Features: Multi-account, Bulk operations, Notifications, Session recovery\n");
-            fetchBotStatus();
+        function searchReport() {
+            const searchInput = document.getElementById('search-input');
+            const searchBtn = document.getElementById('search-btn');
+            const reportId = searchInput.value.trim();
             
-            // Update system metrics every 5 seconds
-            setInterval(updateSystemMetrics, 5000);
-            setInterval(fetchBotStatus, 10000);
+            if (!reportId) {
+                alert('Please enter a report ID');
+                return;
+            }
+            
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
+            
+            document.getElementById('search-container').style.display = 'none';
+            document.getElementById('message-box').style.display = 'block';
+            document.getElementById('report-content').innerHTML = '<div class="loading-text">Loading report...</div>';
+            
+            fetchReportData(reportId).then(reportData => {
+                displayReportData(reportData);
+                searchBtn.disabled = false;
+                searchBtn.textContent = 'Search Report';
+            });
+        }
+
+        function showSearchInterface() {
+            document.getElementById('sender-info').textContent = 'No report ID provided';
+            document.getElementById('message-box').style.display = 'none';
+            document.getElementById('search-container').style.display = 'block';
+            
+            document.getElementById('search-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchReport();
+                }
+            });
+        }
+
+        function revealMessage(spoilerElement) {
+            if (spoilerElement.classList.contains('hidden')) {
+                watchAdToReveal(spoilerElement);
+            }
+        }
+
+        async function watchAdToReveal(spoilerElement) {
+            if (messageUnlocked) {
+                spoilerElement.classList.remove('hidden');
+                return;
+            }
+
+            const overlay = spoilerElement.querySelector('.unlock-overlay');
+            const icon = overlay.querySelector('.unlock-icon');
+            const text = overlay.querySelector('.unlock-text');
+            
+            
+            spoilerElement.classList.add('loading');
+            icon.className = 'fas fa-spinner fa-spin unlock-icon';
+            text.textContent = 'Loading Ad...';
+            
+            try {
+                if (typeof window.show_9481095 !== 'function') {
+                    throw new Error("Ad service function not loaded.");
+                }
+
+                await window.show_9481095();
+                
+                messageUnlocked = true;
+                
+                spoilerElement.classList.remove('hidden', 'loading');
+                
+            } catch (error) {
+                alert("Ad failed or was not completed. Message remains hidden.");
+                console.error("Ad failed:", error);
+                
+                icon.className = 'fas fa-play-circle unlock-icon';
+                text.textContent = 'Watch Ad to Reveal Message';
+                spoilerElement.classList.add('hidden');
+                spoilerElement.classList.remove('loading');
+
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", async function () {
+            const tgApp = window.Telegram.WebApp;
+            tgApp.ready();
+            
+            lottie.loadAnimation({
+                container: document.getElementById("sticker-container"),
+                renderer: "svg",
+                loop: true,
+                autoplay: true,
+                path: "https://assets9.lottiefiles.com/packages/lf20_raiw2hpe.json"
+            });
+
+            lottie.loadAnimation({
+                container: document.getElementById("header-lottie"),
+                renderer: "svg",
+                loop: true,
+                autoplay: true,
+                path: "/Apis/MsgScanner/Pro/scanRobot.json"
+            });
+
+            const reportId = getReportId();
+            
+            if (reportId) {
+                const reportData = await fetchReportData(reportId);
+                displayReportData(reportData);
+            } else {
+                showSearchInterface();
+            }
+
+            setTimeout(() => {
+                const loadingScreen = document.getElementById("loading-screen");
+                loadingScreen.style.opacity = "0";
+                setTimeout(() => {
+                    loadingScreen.style.display = "none";
+                    showMainButton();
+                }, 500);
+            }, 3000);
         });
+
+        function showMainButton() {
+            let tg = window.Telegram.WebApp;
+            tg.MainButton.setText("Close App");
+            tg.MainButton.setParams({
+                has_shine_effect: true
+            });
+            tg.MainButton.show();
+            tg.MainButton.onClick(() => {
+                tg.close();
+            });
+        }
     </script>
 </body>
 </html>
