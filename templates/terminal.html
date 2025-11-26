@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Userbot Manager • Control Panel</title>
+    <title>Userbot Manager • Advanced Control Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
@@ -34,11 +34,38 @@
         .glow-text { text-shadow: 0 0 15px rgba(74, 222, 128, 0.6); }
         .status-card { transition: all 0.3s ease; }
         .status-card:hover { transform: translateY(-2px); }
-
+        
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #10b981;
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot {
+            transform: translateX(1.5rem);
+        }
+
+        .notification-enter {
+            transform: translateX(100%);
+        }
+        .notification-enter-active {
+            transform: translateX(0);
+            transition: transform 300ms ease-out;
+        }
+        .notification-exit-active {
+            transform: translateX(100%);
+            transition: transform 300ms ease-in;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="text-gray-100">
@@ -53,15 +80,21 @@
                 <span class="font-medium">Dashboard</span>
             </a>
 
-            <div class="flex items-center gap-5 text-sm bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50 backdrop-blur-md">
-                <div id="connection-status" class="flex items-center gap-2 border-r border-gray-600 pr-4">
-                    <span class="inline-block w-2 h-2 bg-orange-400 rounded-full"></span>
-                    <span class="text-orange-400 font-medium">Connecting...</span>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-5 text-sm bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700/50 backdrop-blur-md">
+                    <div id="connection-status" class="flex items-center gap-2 border-r border-gray-600 pr-4">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <span class="text-green-400 font-medium">System Connected</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-blue-300 font-mono">
+                        <i class="fas fa-network-wired text-xs"></i>
+                        <span id="ping-display">Ping: --ms</span>
+                    </div>
                 </div>
-                <div class="flex items-center gap-2 text-blue-300 font-mono">
-                    <i class="fas fa-network-wired text-xs"></i>
-                    <span id="ping-display">Ping: <span class="text-gray-400">--ms</span></span>
-                </div>
+                
+                <button onclick="openSettings()" class="bg-slate-800/50 hover:bg-slate-700/50 p-2 rounded-full border border-slate-700/50 transition-all">
+                    <i class="fas fa-cog text-gray-400 hover:text-white"></i>
+                </button>
             </div>
         </div>
 
@@ -69,8 +102,36 @@
             <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent glow-text">
                 Userbot Manager
             </h1>
-            <p class="text-gray-400 mt-3 text-lg">Advanced Pyrogram Control • Live Terminal • Bot Management</p>
+            <p class="text-gray-400 mt-3 text-lg">Advanced Pyrogram Control • Multi-Account • Real-time Monitoring</p>
         </header>
+
+        <!-- System Resources Monitoring -->
+        <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-cyan-700/30 mb-8">
+            <div class="bg-gradient-to-r from-cyan-900/40 to-blue-900/40 px-6 py-4 border-b border-cyan-700/50">
+                <h2 class="text-xl font-bold flex items-center gap-3">
+                    <i class="fas fa-chart-line text-cyan-300"></i>
+                    <span class="text-cyan-300">System Monitoring</span>
+                </h2>
+            </div>
+            <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-green-400" id="cpu-usage">0%</div>
+                    <div class="text-xs text-gray-400 mt-1">CPU Usage</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-blue-400" id="memory-usage">0 MB</div>
+                    <div class="text-xs text-gray-400 mt-1">Memory</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-purple-400" id="active-bots">0</div>
+                    <div class="text-xs text-gray-400 mt-1">Active Bots</div>
+                </div>
+                <div class="text-center p-4 bg-slate-800/50 rounded-xl">
+                    <div class="text-2xl font-bold text-yellow-400" id="total-uptime">00:00</div>
+                    <div class="text-xs text-gray-400 mt-1">Total Uptime</div>
+                </div>
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
 
@@ -81,28 +142,80 @@
                             <i class="fas fa-terminal text-blue-400"></i>
                             <span class="text-blue-300">Live Terminal</span>
                         </h2>
-                        <span class="text-xs bg-slate-800 px-2 py-1 rounded text-gray-400 border border-slate-600">bash/python</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs bg-slate-800 px-2 py-1 rounded text-gray-400 border border-slate-600">bash/python</span>
+                            <button onclick="clearTerminal()" class="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded text-gray-400 border border-slate-600 transition-colors">
+                                <i class="fas fa-broom"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div id="terminal-search-bar" class="p-3 border-b border-slate-700 bg-slate-800/50 flex gap-2 hidden">
+                        <input type="text" id="terminal-search" placeholder="Search in terminal..." 
+                            class="flex-1 bg-slate-700/50 text-white px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <button onclick="clearSearch()" class="bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded-lg text-sm transition-colors">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
 
                     <div id="terminal-output" class="terminal scroll-container rounded-b-lg p-5 min-h-96">
-                        <pre id="output-content" class="text-green-400">Initializing Userbot Interface...
-[System] Interface loaded.
-Connecting to server...</pre>
+                        <pre id="output-content" class="text-green-400">Initializing Userbot Interface<span class="animate-pulse">...</span></pre>
                     </div>
 
                     <div class="p-5 border-t border-slate-700 bg-slate-900/50">
                         <div class="flex items-center gap-3 mb-4">
                             <span class="text-green-400 font-bold text-lg">$</span>
-                            <input type="text" id="command-input" class="flex-1 bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500" placeholder="Type command...">
+                            <input type="text" id="command-input" 
+                                class="flex-1 bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
+                                placeholder="Type command...">
                         </div>
                         <div class="flex gap-3">
-                            <button onclick="executeCommand()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2">
+                            <button onclick="executeCommand()" 
+                                class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2">
                                 <i class="fas fa-play"></i> Execute
                             </button>
-                            <button onclick="interruptProcess()" class="bg-red-600/80 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-red-500/25">
+                            <button onclick="interruptProcess()" 
+                                class="bg-red-600/80 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-red-500/25">
                                 <i class="fas fa-stop"></i> Stop
                             </button>
+                            <button onclick="toggleSearch()" 
+                                class="bg-gray-600/80 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl transition-all">
+                                <i class="fas fa-search"></i>
+                            </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="glass rounded-2xl shadow-2xl overflow-hidden border border-emerald-700/30 mt-8">
+                    <div class="bg-gradient-to-r from-emerald-900/40 to-green-900/40 px-6 py-4 border-b border-emerald-700/50">
+                        <h2 class="text-xl font-bold flex items-center gap-3">
+                            <i class="fas fa-bolt text-emerald-300"></i>
+                            <span class="text-emerald-300">Quick Actions</span>
+                        </h2>
+                    </div>
+                    <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button onclick="runPresetCommand('status')" 
+                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-green-400 group">
+                            <i class="fas fa-info-circle text-green-400 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs block mt-1">Check Status</span>
+                        </button>
+                        <button onclick="runPresetCommand('restart')" 
+                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-yellow-400 group">
+                            <i class="fas fa-redo text-yellow-400 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs block mt-1">Restart All</span>
+                        </button>
+                        <button onclick="runPresetCommand('logs')" 
+                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-blue-400 group">
+                            <i class="fas fa-scroll text-blue-400 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs block mt-1">Show Logs</span>
+                        </button>
+                        <button onclick="runPresetCommand('update')" 
+                            class="bg-slate-700/50 hover:bg-slate-600/50 p-3 rounded-lg transition-all border border-slate-600 hover:border-purple-400 group">
+                            <i class="fas fa-sync text-purple-400 group-hover:scale-110 transition-transform"></i>
+                            <span class="text-xs block mt-1">Update</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -118,65 +231,216 @@ Connecting to server...</pre>
 
                     <div class="p-6 space-y-5">
                         
-                        <div class="mb-4 bg-blue-900/30 border border-blue-500/50 p-3 rounded-lg">
-                            <p class="text-blue-300 text-sm mb-2">
-                                <i class="fas fa-info-circle"></i> Don't know how to get API ID and Hash?
-                            </p>
-                            <a href="/tutorial" target="_blank" class="inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 w-full text-center">
-                                <i class="fas fa-external-link-alt"></i> View Complete Tutorial
-                            </a>
+                        <div id="saved-accounts-container" class="hidden animate-fade-in-down">
+                            <label class="text-xs text-blue-400 ml-1 uppercase font-semibold tracking-wider flex justify-between">
+                                <span>Saved Accounts</span>
+                                <span class="cursor-pointer hover:text-red-400" onclick="clearHistory()">Clear All</span>
+                            </label>
+                            <div class="relative mt-1">
+                                <select id="saved-accounts-select" onchange="loadFromHistory(this.value)" 
+                                    class="w-full bg-slate-800/90 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 border border-slate-600 appearance-none cursor-pointer">
+                                    <option value="">Select a saved account...</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-400">
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </div>
+                            </div>
                         </div>
-                        
+
                         <form id="bot-form" class="space-y-4">
                             <div class="space-y-2">
                                 <label class="text-xs text-gray-400 ml-1 uppercase font-semibold tracking-wider">Credentials</label>
-                                <input type="text" id="api_id" placeholder="API ID" required class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
-                                <input type="text" id="api_hash" placeholder="API Hash" required class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
-                                <input type="text" id="phone_number" placeholder="Phone Number (+880...)" required class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
+                                <input type="text" id="api_id" placeholder="API ID" required
+                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
+                                <input type="text" id="api_hash" placeholder="API Hash" required
+                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
+                                <input type="text" id="phone_number" placeholder="Phone Number (+880...)" required
+                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-500 border border-gray-700">
                             </div>
 
                             <div id="auth-fields" class="space-y-4 hidden pt-4 border-t border-gray-700">
                                 <p class="text-yellow-400 text-sm"><i class="fas fa-exclamation-triangle"></i> Verification Required</p>
-                                <input type="text" id="verification_code" placeholder="Telegram Code (1-2-3-4-5)" class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
-                                <input type="password" id="password" placeholder="2FA Password (if enabled)" class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
+                                <input type="text" id="verification_code" placeholder="Telegram Code (1-2-3-4-5)"
+                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
+                                <input type="password" id="password" placeholder="2FA Password (if enabled)"
+                                    class="w-full bg-gray-800/70 text-white px-4 py-3 rounded-xl focus:ring-2 focus:ring-green-500 placeholder-gray-500 border border-gray-700">
                             </div>
 
                             <div class="flex gap-3 pt-2">
-                                <button type="submit" id="start-btn" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/30 flex items-center justify-center gap-2">
+                                <button type="submit" id="start-btn"
+                                    class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-emerald-500/30 flex items-center justify-center gap-2">
                                     <i class="fas fa-save"></i> Save & Start
                                 </button>
-                                <button type="button" onclick="stopBot()" class="flex-1 bg-gradient-to-r from-red-600 to-pink-700 hover:from-red-500 hover:to-pink-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/30">
+                                <button type="button" onclick="stopBot()"
+                                    class="flex-1 bg-gradient-to-r from-red-600 to-pink-700 hover:from-red-500 hover:to-pink-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-red-500/30">
                                     <i class="fas fa-square"></i> Stop
+                                </button>
+                            </div>
+
+                            <!-- Session Reset Button -->
+                            <div class="flex gap-2 pt-2">
+                                <button type="button" onclick="resetSession()"
+                                    class="flex-1 bg-gradient-to-r from-orange-600 to-amber-700 hover:from-orange-500 hover:to-amber-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-orange-500/30 flex items-center justify-center gap-2">
+                                    <i class="fas fa-sync-alt"></i> Reset Session
                                 </button>
                             </div>
                         </form>
 
-                        <div id="bot-status" class="mt-6">
-                            <h3 class="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
-                                <i class="fas fa-chart-line text-blue-400"></i> Current Bot Status
-                            </h3>
-                            <div id="status-list" class="space-y-3 bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                                <p class="text-gray-400 text-sm">No bots running.</p>
+                        <!-- Bulk Operations -->
+                        <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700">
+                            <h3 class="text-sm font-semibold text-gray-400 mb-3">Bulk Operations</h3>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="bulkOperation('start')" 
+                                    class="bg-green-600/20 hover:bg-green-600/30 border border-green-600 text-green-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
+                                    <i class="fas fa-play"></i> Start All
+                                </button>
+                                <button onclick="bulkOperation('stop')" 
+                                    class="bg-red-600/20 hover:bg-red-600/30 border border-red-600 text-red-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
+                                    <i class="fas fa-stop"></i> Stop All
+                                </button>
+                                <button onclick="bulkOperation('restart')" 
+                                    class="bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600 text-yellow-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
+                                    <i class="fas fa-redo"></i> Restart All
+                                </button>
+                                <button onclick="exportAccounts()" 
+                                    class="bg-purple-600/20 hover:bg-purple-600/30 border border-purple-600 text-purple-400 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-1 text-sm">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
                             </div>
                         </div>
 
+                        <div id="bot-status">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-sm font-semibold text-gray-400 uppercase tracking-wider">Current Status</h3>
+                                <div class="flex gap-1">
+                                    <button onclick="filterBots('all')" class="px-2 py-1 bg-blue-500 text-white rounded-full text-xs transition-all">All</button>
+                                    <button onclick="filterBots('running')" class="px-2 py-1 bg-slate-600 hover:bg-green-500 text-gray-300 rounded-full text-xs transition-all">Running</button>
+                                    <button onclick="filterBots('stopped')" class="px-2 py-1 bg-slate-600 hover:bg-red-500 text-gray-300 rounded-full text-xs transition-all">Stopped</button>
+                                </div>
+                            </div>
+                            <div id="status-list" class="space-y-3">
+                                <div class="bg-gray-800/40 rounded-lg p-4 text-center border border-gray-700 border-dashed">
+                                    <span class="text-gray-500 text-sm">Waiting for connection...</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <footer class="relative z-10 text-center py-6 mt-12">
-        <p class="text-gray-400 text-sm">
-            <i class="fab fa-telegram text-blue-400"></i> Join our channel: 
-            <a href="https://t.me/no_coder_xone" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">@no_coder_xone</a>
-            <span class="mx-2">•</span>
-            Dev: <a href="https://t.me/no_coder_pro" target="_blank" class="text-red-400 hover:text-purple-300 transition-colors">@no_coder_pro</a><span class="mx-2">•</span>
-            Mod: <a href="https://t.me/BotCoderBD" target="_blank" class="text-purple-400 hover:text-purple-300 transition-colors">@BotCoderBD</a>
-        </p>
-    </footer>
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50">
+        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl">
+            <div class="glass rounded-2xl border border-slate-600 m-4">
+                <div class="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-4 border-b border-slate-600 flex justify-between items-center">
+                    <h2 class="text-xl font-bold text-white">Settings</h2>
+                    <button onclick="closeSettings()" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 max-h-96 overflow-y-auto">
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-300 mb-3">Terminal Settings</h3>
+                            <div class="space-y-3">
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="text-gray-400">Auto-scroll terminal</span>
+                                    <div class="relative inline-block w-12 h-6">
+                                        <input type="checkbox" id="auto-scroll" checked class="toggle-checkbox hidden">
+                                        <label for="auto-scroll" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
+                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
+                                        </label>
+                                    </div>
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="text-gray-400">Show timestamps</span>
+                                    <div class="relative inline-block w-12 h-6">
+                                        <input type="checkbox" id="show-timestamps" class="toggle-checkbox hidden">
+                                        <label for="show-timestamps" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
+                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
+                                        </label>
+                                    </div>
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="text-gray-400">Save command history</span>
+                                    <div class="relative inline-block w-12 h-6">
+                                        <input type="checkbox" id="save-history" checked class="toggle-checkbox hidden">
+                                        <label for="save-history" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
+                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
+                                        </label>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-300 mb-3">Theme Customization</h3>
+                            <div class="grid grid-cols-3 gap-3">
+                                <button onclick="changeTheme('default')" class="bg-slate-700 p-3 rounded-lg border-2 border-blue-500">
+                                    <div class="h-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded"></div>
+                                    <span class="text-xs text-gray-400 mt-1">Default</span>
+                                </button>
+                                <button onclick="changeTheme('green')" class="bg-slate-700 p-3 rounded-lg border border-slate-600">
+                                    <div class="h-4 bg-gradient-to-r from-green-400 to-emerald-400 rounded"></div>
+                                    <span class="text-xs text-gray-400 mt-1">Green</span>
+                                </button>
+                                <button onclick="changeTheme('red')" class="bg-slate-700 p-3 rounded-lg border border-slate-600">
+                                    <div class="h-4 bg-gradient-to-r from-red-400 to-pink-400 rounded"></div>
+                                    <span class="text-xs text-gray-400 mt-1">Red</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-300 mb-3">Notifications</h3>
+                            <div class="space-y-3">
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="text-gray-400">Success notifications</span>
+                                    <div class="relative inline-block w-12 h-6">
+                                        <input type="checkbox" id="notif-success" checked class="toggle-checkbox hidden">
+                                        <label for="notif-success" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
+                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
+                                        </label>
+                                    </div>
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="text-gray-400">Error notifications</span>
+                                    <div class="relative inline-block w-12 h-6">
+                                        <input type="checkbox" id="notif-error" checked class="toggle-checkbox hidden">
+                                        <label for="notif-error" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
+                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
+                                        </label>
+                                    </div>
+                                </label>
+                                <label class="flex items-center justify-between cursor-pointer">
+                                    <span class="text-gray-400">Bot status changes</span>
+                                    <div class="relative inline-block w-12 h-6">
+                                        <input type="checkbox" id="notif-status" checked class="toggle-checkbox hidden">
+                                        <label for="notif-status" class="toggle-label block w-12 h-6 bg-gray-600 rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer">
+                                            <div class="toggle-dot bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0"></div>
+                                        </label>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-slate-600 flex justify-end gap-3">
+                    <button onclick="closeSettings()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
+                        Cancel
+                    </button>
+                    <button onclick="saveSettings()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors">
+                        Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script>
+        // ================= SPACE ANIMATION =================
         const canvas = document.getElementById('space-canvas');
         const ctx = canvas.getContext('2d');
         let starsArray = [];
@@ -232,7 +496,10 @@ Connecting to server...</pre>
 
         initStars();
         animateStars();
+        // ================= END SPACE ANIMATION =================
 
+
+        // ================= APP LOGIC =================
         const socket = io();
         const outputElement = document.getElementById('output-content');
         const inputElement = document.getElementById('command-input');
@@ -241,186 +508,805 @@ Connecting to server...</pre>
         const statusListElement = document.getElementById('status-list');
         const connectionStatus = document.getElementById('connection-status');
         const pingDisplay = document.getElementById('ping-display');
+        const savedAccountsSelect = document.getElementById('saved-accounts-select');
+        const savedAccountsContainer = document.getElementById('saved-accounts-container');
 
-        let lastPingTime = Date.now();
+        // Command History
+        let commandHistory = [];
+        let historyIndex = -1;
 
-        function updateConnectionStatusUI(isConnected, ping = null) {
-            let statusHtml;
-            let statusColor = isConnected ? 'green' : 'orange';
-            let statusText = isConnected ? 'System Connected' : 'Disconnected';
+        // Settings
+        const settings = {
+            autoScroll: true,
+            showTimestamps: false,
+            saveHistory: true,
+            theme: 'default',
+            notifications: {
+                success: true,
+                error: true,
+                status: true
+            }
+        };
 
-            statusHtml = `<span class="inline-block w-2 h-2 bg-${statusColor}-400 rounded-full ${isConnected ? 'animate-pulse' : ''}"></span><span class="text-${statusColor}-400 font-medium">${statusText}</span>`;
-            connectionStatus.innerHTML = statusHtml;
+        // --- PING ---
+        async function measurePing() {
+            const start = Date.now();
+            try {
+                await fetch(window.location.href, { method: 'HEAD', cache: 'no-cache' });
+                const latency = Date.now() - start;
+                let color = latency > 300 ? 'text-red-400' : latency > 150 ? 'text-yellow-400' : 'text-green-400';
+                pingDisplay.innerHTML = `Ping: <span class="${color}">${latency}ms</span>`;
+            } catch {
+                pingDisplay.innerHTML = `Ping: <span class="text-red-500">Timeout</span>`;
+            }
+        }
+        setInterval(measurePing, 2000);
 
-            if (ping !== null) {
-                const pingColor = ping < 100 ? 'green' : ping < 300 ? 'yellow' : 'red';
-                pingDisplay.innerHTML = `Ping: <span class="text-${pingColor}-400">${ping}ms</span>`;
+        // --- SYSTEM MONITORING ---
+        function updateSystemMetrics() {
+            // Simulate system metrics (in real app, get from backend)
+            document.getElementById('cpu-usage').textContent = Math.floor(Math.random() * 30 + 10) + '%';
+            document.getElementById('memory-usage').textContent = Math.floor(Math.random() * 200 + 100) + ' MB';
+            
+            // Count active bots
+            const activeBots = document.querySelectorAll('.status-card').length;
+            document.getElementById('active-bots').textContent = activeBots;
+            
+            // Update total uptime
+            updateTotalUptime();
+        }
+
+        function updateTotalUptime() {
+            // This would calculate total uptime across all bots
+            document.getElementById('total-uptime').textContent = '24h 15m';
+        }
+
+        // --- NOTIFICATION SYSTEM ---
+        function showNotification(message, type = 'info', duration = 5000) {
+            if (!settings.notifications[type] && type !== 'info') return;
+
+            const notification = document.createElement('div');
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            const colors = {
+                success: 'text-green-400 border-green-500',
+                error: 'text-red-400 border-red-500',
+                warning: 'text-yellow-400 border-yellow-500',
+                info: 'text-blue-400 border-blue-500'
+            };
+            
+            notification.className = `fixed top-4 right-4 glass border-l-4 ${colors[type]} p-4 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50 max-w-sm notification-enter`;
+            notification.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas ${icons[type]}"></i>
+                    <span class="text-sm">${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+                notification.classList.add('notification-enter-active');
+            }, 100);
+            
+            setTimeout(() => {
+                notification.classList.remove('notification-enter-active');
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, duration);
+        }
+
+        // --- COMMAND HISTORY ---
+        function loadCommandHistory() {
+            const saved = localStorage.getItem('commandHistory');
+            if (saved) {
+                commandHistory = JSON.parse(saved);
             }
         }
 
-        socket.on('connect', function() {
-            updateConnectionStatusUI(true);
-            appendOutput('\n[System] Connected to server.\n🚀 Web Terminal Connected! Use the forms to manage the Telegram Bot.\n');
-            lastPingTime = Date.now();
-        });
-
-        socket.on('disconnect', function() {
-            updateConnectionStatusUI(false);
-            appendOutput('\n[System] Disconnected from server.\n');
-        });
-
-        socket.on('pong', function() {
-            const ping = Date.now() - lastPingTime;
-            updateConnectionStatusUI(true, ping);
-        });
-
-        setInterval(() => {
-            lastPingTime = Date.now();
-            socket.emit('ping');
-        }, 3000);
-
-        function appendOutput(data) {
-            outputElement.textContent += data.replace(/\r?\n/g, '\n');
-            const container = document.getElementById('terminal-output');
-            container.scrollTop = container.scrollHeight;
+        function saveCommandHistory() {
+            if (settings.saveHistory) {
+                localStorage.setItem('commandHistory', JSON.stringify(commandHistory));
+            }
         }
 
-        socket.on('output', function(msg) {
-            appendOutput(msg.data);
+        function addToHistory(command) {
+            if (command.trim() && !commandHistory.includes(command)) {
+                commandHistory.unshift(command);
+                if (commandHistory.length > 50) commandHistory.pop();
+                saveCommandHistory();
+            }
+            historyIndex = -1;
+        }
+
+        // --- TERMINAL SEARCH ---
+        function toggleSearch() {
+            const searchBar = document.getElementById('terminal-search-bar');
+            if (searchBar.classList.contains('hidden')) {
+                searchBar.classList.remove('hidden');
+                document.getElementById('terminal-search').focus();
+            } else {
+                searchBar.classList.add('hidden');
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('terminal-search').value = '';
+            // Remove search highlights
+            const output = document.getElementById('output-content');
+            output.innerHTML = output.innerHTML.replace(/<mark class="bg-yellow-500 text-black">|<\/mark>/g, '');
+        }
+
+        function performSearch() {
+            const searchTerm = document.getElementById('terminal-search').value;
+            if (!searchTerm) {
+                clearSearch();
+                return;
+            }
+
+            const output = document.getElementById('output-content');
+            const content = output.textContent;
+            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            const highlighted = content.replace(regex, '<mark class="bg-yellow-500 text-black">$1</mark>');
+            output.innerHTML = highlighted;
+        }
+
+        // --- BULK OPERATIONS ---
+        async function bulkOperation(action) {
+            showNotification(`Starting ${action} operation on all bots...`, 'info');
+            
+            try {
+                // First check if backend is responding
+                const testRes = await fetch('/api/bot/status');
+                if (!testRes.ok) {
+                    throw new Error('Backend server not responding properly');
+                }
+
+                const res = await fetch(`/api/bot/${action}-all`, { 
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
+                
+                // Check if response is JSON
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
+                }
+                
+                const result = await res.json();
+                
+                if (result.success) {
+                    showNotification(`${action} operation completed successfully`, 'success');
+                    fetchBotStatus();
+                } else {
+                    showNotification(`Failed to ${action} bots: ${result.message}`, 'error');
+                }
+            } catch (err) {
+                console.error('Bulk operation error:', err);
+                showNotification(`Error during ${action} operation: ${err.message}`, 'error');
+                appendOutput(`\n[Error] ${action} operation failed: ${err.message}\n`);
+            }
+        }
+
+        function exportAccounts() {
+            const history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
+            if (history.length === 0) {
+                showNotification('No accounts to export', 'warning');
+                return;
+            }
+
+            const dataStr = JSON.stringify(history, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'userbot_accounts_backup.json';
+            link.click();
+            
+            showNotification('Accounts exported successfully', 'success');
+        }
+
+        // --- SESSION RESET ---
+        async function resetSession() {
+            const phone = document.getElementById('phone_number').value.trim();
+            if (!phone) {
+                showNotification('Please enter a phone number first', 'warning');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to reset session for ${phone}? This will force a fresh login.`)) {
+                return;
+            }
+
+            appendOutput(`\n[Manager] Resetting session for ${phone}...\n`);
+            showNotification(`Resetting session for ${phone}`, 'info');
+
+            try {
+                // First stop the bot if running
+                await stopBot();
+                
+                // Wait a moment
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Call session reset API
+                const res = await fetch('/api/bot/reset-session', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ phone_number: phone }) 
+                });
+
+                // Check if response is JSON
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
+                }
+
+                const result = await res.json();
+                
+                if (result.success) {
+                    showNotification('Session reset successfully. You can now login again.', 'success');
+                    appendOutput(`\n[Success] Session reset successfully for ${phone}\n`);
+                    
+                    // Clear verification fields
+                    document.getElementById('verification_code').value = '';
+                    document.getElementById('password').value = '';
+                    
+                    // Show auth fields for fresh login
+                    authFields.classList.remove('hidden');
+                    
+                } else {
+                    showNotification(`Failed to reset session: ${result.message}`, 'error');
+                    appendOutput(`\n[Error] Failed to reset session: ${result.message}\n`);
+                }
+                
+            } catch (err) {
+                console.error('Reset session error:', err);
+                appendOutput(`\n[Error] Failed to reset session: ${err.message}\n`);
+                showNotification(`Failed to reset session: ${err.message}`, 'error');
+            }
+        }
+
+        // --- AUTOMATIC SESSION RECOVERY ---
+        function handleAuthKeyDuplicated(error, phone) {
+            appendOutput(`\n[Critical] AUTH_KEY_DUPLICATED error detected for ${phone}\n`);
+            appendOutput(`[System] This usually happens when the same account is used in multiple places.\n`);
+            
+            showNotification('Session conflict detected. Attempting automatic recovery...', 'warning', 10000);
+            
+            // Ask user if they want to automatically reset the session
+            setTimeout(() => {
+                if (confirm('Session conflict detected! Do you want to reset the session and login again?')) {
+                    resetSession();
+                } else {
+                    appendOutput(`[System] Manual session reset required. Click "Reset Session" button when ready.\n`);
+                }
+            }, 2000);
+        }
+
+        // --- SETTINGS MANAGEMENT ---
+        function loadSettings() {
+            const saved = localStorage.getItem('userbot_settings');
+            if (saved) {
+                Object.assign(settings, JSON.parse(saved));
+            }
+            applySettings();
+        }
+
+        function saveSettings() {
+            // Update settings from UI
+            settings.autoScroll = document.getElementById('auto-scroll').checked;
+            settings.showTimestamps = document.getElementById('show-timestamps').checked;
+            settings.saveHistory = document.getElementById('save-history').checked;
+            
+            settings.notifications.success = document.getElementById('notif-success').checked;
+            settings.notifications.error = document.getElementById('notif-error').checked;
+            settings.notifications.status = document.getElementById('notif-status').checked;
+
+            localStorage.setItem('userbot_settings', JSON.stringify(settings));
+            applySettings();
+            closeSettings();
+            showNotification('Settings saved successfully', 'success');
+        }
+
+        function applySettings() {
+            // Apply settings to UI
+            document.getElementById('auto-scroll').checked = settings.autoScroll;
+            document.getElementById('show-timestamps').checked = settings.showTimestamps;
+            document.getElementById('save-history').checked = settings.saveHistory;
+            
+            document.getElementById('notif-success').checked = settings.notifications.success;
+            document.getElementById('notif-error').checked = settings.notifications.error;
+            document.getElementById('notif-status').checked = settings.notifications.status;
+
+            // Apply theme
+            document.documentElement.setAttribute('data-theme', settings.theme);
+        }
+
+        function openSettings() {
+            document.getElementById('settings-panel').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-panel').classList.add('hidden');
+        }
+
+        function changeTheme(theme) {
+            settings.theme = theme;
+            // Theme change logic would go here
+            showNotification(`Theme changed to ${theme}`, 'info');
+        }
+
+        // --- HISTORY ---
+        function updateHistoryUI() {
+            const history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
+            savedAccountsSelect.innerHTML = '<option value="">Select a saved account...</option>';
+            if (history.length > 0) {
+                savedAccountsContainer.classList.remove('hidden');
+                history.forEach((acc, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.textContent = `${acc.phone} (ID: ${acc.id})`;
+                    savedAccountsSelect.appendChild(opt);
+                });
+            } else {
+                savedAccountsContainer.classList.add('hidden');
+            }
+        }
+
+        function saveToHistory(id, hash, phone) {
+            let history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
+            history = history.filter(a => a.phone !== phone);
+            history.push({ id, hash, phone });
+            localStorage.setItem('userbot_history', JSON.stringify(history));
+            updateHistoryUI();
+        }
+
+        function loadFromHistory(i) {
+            if (i === "") return;
+            const history = JSON.parse(localStorage.getItem('userbot_history') || '[]');
+            const acc = history[i];
+            if (acc) {
+                document.getElementById('api_id').value = acc.id;
+                document.getElementById('api_hash').value = acc.hash;
+                document.getElementById('phone_number').value = acc.phone;
+                appendOutput(`\n[System] Loaded credentials for ${acc.phone}\n`);
+            }
+        }
+
+        function clearHistory() {
+            if (confirm("Delete all saved accounts?")) {
+                localStorage.removeItem('userbot_history');
+                updateHistoryUI();
+                appendOutput(`\n[System] All saved accounts cleared.\n`);
+                showNotification('Account history cleared', 'info');
+            }
+        }
+
+        // --- UPTIME COUNTER (Persistent across refresh) ---
+        const uptimeIntervals = {}; // phone => interval ID
+
+        function formatUptime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const s = String(totalSeconds % 60).padStart(2, '0');
+            return `${h}h ${m}m ${s}s`;
+        }
+
+        function startUptimeCounter(phone) {
+            const key = `uptime_start_${phone}`;
+            let startTime = localStorage.getItem(key);
+
+            // If not exist, create now
+            if (!startTime) {
+                startTime = Date.now().toString();
+                localStorage.setItem(key, startTime);
+            } else {
+                startTime = parseInt(startTime);
+            }
+
+            // Clear previous interval if any
+            if (uptimeIntervals[phone]) clearInterval(uptimeIntervals[phone]);
+
+            const element = document.querySelector(`[data-uptime="${phone}"]`);
+            if (!element) return;
+
+            const update = () => {
+                const elapsed = Date.now() - startTime;
+                element.textContent = formatUptime(elapsed);
+            };
+            update();
+            uptimeIntervals[phone] = setInterval(update, 1000);
+        }
+
+        function stopUptimeCounter(phone) {
+            if (uptimeIntervals[phone]) {
+                clearInterval(uptimeIntervals[phone]);
+                delete uptimeIntervals[phone];
+            }
+            localStorage.removeItem(`uptime_start_${phone}`);
+        }
+
+        // --- OUTPUT ---
+        function appendOutput(data) {
+            if (settings.showTimestamps) {
+                const timestamp = new Date().toLocaleTimeString();
+                data = `[${timestamp}] ${data}`;
+            }
+            
+            outputElement.textContent += data.replace(/\r?\n/g, '\n');
+            
+            if (settings.autoScroll) {
+                const container = document.getElementById('terminal-output');
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function clearTerminal() {
+            outputElement.textContent = '';
+            appendOutput('[System] Terminal cleared.\n');
+        }
+
+        // --- QUICK ACTIONS ---
+        function runPresetCommand(type) {
+            const commands = {
+                status: 'python -c "from your_bot_module import get_status; print(get_status())"',
+                restart: 'sudo systemctl restart userbot',
+                logs: 'tail -f /var/log/userbot.log',
+                update: 'git pull && pip install -r requirements.txt'
+            };
+            
+            if (commands[type]) {
+                inputElement.value = commands[type];
+                executeCommand();
+                showNotification(`Executing ${type} command`, 'info');
+            }
+        }
+
+        // --- BOT FILTERING ---
+        function filterBots(filter) {
+            const cards = document.querySelectorAll('.status-card');
+            cards.forEach(card => {
+                const isRunning = card.classList.contains('border-green-500');
+                
+                if (filter === 'all' || 
+                    (filter === 'running' && isRunning) || 
+                    (filter === 'stopped' && !isRunning)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // --- SESSION CONFLICT PREVENTION ---
+        function preventSessionConflicts(phone) {
+            // Check if bot is already running with this phone
+            const runningBots = document.querySelectorAll('.status-card.border-green-500');
+            runningBots.forEach(bot => {
+                const botPhone = bot.querySelector('p.text-xs').textContent;
+                if (botPhone === phone) {
+                    if (!confirm(`Bot for ${phone} is already running. Starting another instance may cause session conflicts. Continue?`)) {
+                        throw new Error('Operation cancelled by user');
+                    }
+                }
+            });
+        }
+
+        // --- SOCKET ---
+        socket.on('connect', () => {
+            connectionStatus.innerHTML = `<span class="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span><span class="text-green-400 font-medium">System Connected</span>`;
+            appendOutput("\n[System] Connected to server.\n");
+            showNotification('Connected to server', 'success');
         });
 
-        socket.on('bot_management_result', function(result) {
+        socket.on('disconnect', () => {
+            connectionStatus.innerHTML = `<span class="inline-block w-2 h-2 bg-orange-400 rounded-full"></span><span class="text-orange-400 font-medium">Disconnected</span>`;
+            showNotification('Disconnected from server', 'error');
+        });
+
+        socket.on('output', msg => appendOutput(msg.data));
+
+        socket.on('bot_management_result', result => {
             appendOutput(`\n[Manager] ${result.status.toUpperCase()} - ${result.message}\n`);
+            
+            if (result.status === 'success') {
+                showNotification('Bot started successfully', 'success');
+            } else if (result.status === 'error') {
+                // Check for AUTH_KEY_DUPLICATED error
+                if (result.message.includes('AUTH_KEY_DUPLICATED') || result.message.includes('AuthKeyDuplicated')) {
+                    const phone = document.getElementById('phone_number').value.trim();
+                    handleAuthKeyDuplicated(result.message, phone);
+                } else {
+                    showNotification(`Bot error: ${result.message}`, 'error');
+                }
+            }
             
             if (result.status === 'code_sent' || result.status === 'password_required') {
                 authFields.classList.remove('hidden');
+                showNotification('Verification required', 'warning');
             } else {
-                document.getElementById('verification_code').value = '';
-                document.getElementById('password').value = '';
                 authFields.classList.add('hidden');
+                fetchBotStatus();
             }
-            fetchBotStatus();
         });
 
-        inputElement.addEventListener('keydown', function(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
+        // --- COMMAND ---
+        inputElement.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
                 executeCommand();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (historyIndex < commandHistory.length - 1) {
+                    historyIndex++;
+                    inputElement.value = commandHistory[historyIndex];
+                }
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (historyIndex > 0) {
+                    historyIndex--;
+                    inputElement.value = commandHistory[historyIndex];
+                } else {
+                    historyIndex = -1;
+                    inputElement.value = '';
+                }
             }
         });
+
+        // Search functionality
+        document.getElementById('terminal-search').addEventListener('input', performSearch);
 
         function executeCommand() {
-            const command = inputElement.value.trim();
-            if (command) {
-                appendOutput(`\n$ ${command}\n`);
-                socket.emit('execute', { command: command });
+            const cmd = inputElement.value.trim();
+            if (cmd) {
+                appendOutput(`\n$ ${cmd}\n`);
+                socket.emit('execute', { command: cmd });
+                addToHistory(cmd);
                 inputElement.value = '';
             }
         }
 
-        function interruptProcess() {
+        function interruptProcess() { 
             socket.emit('interrupt');
+            showNotification('Process interrupted', 'warning');
         }
 
-        formElement.addEventListener('submit', function(e) {
-            e.preventDefault();
-            startBot();
+        // --- START / STOP BOT ---
+        formElement.addEventListener('submit', e => { 
+            e.preventDefault(); 
+            const id = document.getElementById('api_id').value.trim();
+            const hash = document.getElementById('api_hash').value.trim();
+            const phone = document.getElementById('phone_number').value.trim();
+            saveToHistory(id, hash, phone);
+            startBot(); 
         });
 
         async function startBot() {
-            const api_id = document.getElementById('api_id').value;
-            const api_hash = document.getElementById('api_hash').value;
-            const phone_number = document.getElementById('phone_number').value;
-            const verification_code = document.getElementById('verification_code').value;
-            const password = document.getElementById('password').value;
+            const payload = {
+                api_id: document.getElementById('api_id').value,
+                api_hash: document.getElementById('api_hash').value,
+                phone_number: document.getElementById('phone_number').value,
+                verification_code: document.getElementById('verification_code').value,
+                password: document.getElementById('password').value
+            };
+            
+            // Validation
+            if (!payload.api_id || !payload.api_hash || !payload.phone_number) {
+                showNotification('Please fill all required fields', 'warning');
+                return;
+            }
 
-            const payload = { api_id, api_hash, phone_number, verification_code, password };
-
-            appendOutput(`\n[Manager] Attempting to start bot for ${phone_number}...\n`);
-
+            // Session conflict prevention
             try {
-                const response = await fetch('/api/bot/start', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                preventSessionConflicts(payload.phone_number);
+            } catch (err) {
+                showNotification(err.message, 'warning');
+                return;
+            }
+
+            appendOutput(`\n[Manager] Starting bot for ${payload.phone_number}...\n`);
+            showNotification(`Starting bot for ${payload.phone_number}`, 'info');
+            
+            try {
+                const res = await fetch('/api/bot/start', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(payload) 
                 });
-                const result = await response.json();
+
+                // Check if response is JSON
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
+                }
+
+                const result = await res.json();
                 
                 if (result.status !== 'starting') {
-                    socket.emit('bot_management_result', result); 
+                    socket.emit('bot_management_result', result);
                 }
-            } catch (error) {
-                appendOutput(`\n[Manager] Network Error: ${error.message}\n`);
+                
+                if (result.success || result.status === 'success') {
+                    showNotification('Bot started successfully', 'success');
+                }
+                
+            } catch (err) {
+                console.error('Start bot error:', err);
+                appendOutput(`\n[Error] ${err.message}\n`);
+                
+                if (err.message.includes('HTML instead of JSON')) {
+                    showNotification('Backend API not available. Check server configuration.', 'error');
+                } else {
+                    showNotification(`Failed to start bot: ${err.message}`, 'error');
+                }
             }
         }
 
         async function stopBot() {
-            const api_id = document.getElementById('api_id').value;
-            const phone_number = document.getElementById('phone_number').value;
-
-            if (!api_id || !phone_number) {
-                 appendOutput('\n[Manager] Please enter API ID and Phone Number to identify the bot to stop.\n');
-                 return;
+            const phone = document.getElementById('phone_number').value.trim();
+            if (!phone) {
+                showNotification('Please enter a phone number first', 'warning');
+                return;
             }
 
-            appendOutput(`\n[Manager] Attempting to stop bot for ${phone_number}...\n`);
-
+            appendOutput(`\n[Manager] Stopping bot ${phone}...\n`);
+            showNotification(`Stopping bot ${phone}`, 'info');
+            stopUptimeCounter(phone);
+            
             try {
-                const response = await fetch('/api/bot/stop', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ api_id, phone_number })
+                const res = await fetch('/api/bot/stop', { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ phone_number: phone }) 
                 });
-                const result = await response.json();
-                if (result.status !== 'stopping') {
-                    socket.emit('bot_management_result', result);
+
+                // Check if response is JSON
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
                 }
-            } catch (error) {
-                appendOutput(`\n[Manager] Network Error: ${error.message}\n`);
+
+                const result = await res.json();
+                
+                if (result.success) {
+                    showNotification(`Bot ${phone} stopped`, 'success');
+                    appendOutput(`\n[Success] Bot ${phone} stopped successfully\n`);
+                } else {
+                    showNotification(`Failed to stop bot: ${result.message}`, 'error');
+                    appendOutput(`\n[Error] Failed to stop bot: ${result.message}\n`);
+                }
+                
+                fetchBotStatus();
+            } catch (err) {
+                console.error('Stop bot error:', err);
+                appendOutput(`\n[Error] Failed to stop: ${err.message}\n`);
+                
+                // More specific error messages
+                if (err.message.includes('HTML instead of JSON')) {
+                    showNotification('Backend API not available. Check server configuration.', 'error');
+                } else if (err.message.includes('Failed to fetch')) {
+                    showNotification('Network error. Check server connection.', 'error');
+                } else {
+                    showNotification(`Failed to stop bot: ${err.message}`, 'error');
+                }
             }
         }
 
+        // --- STATUS UPDATE ---
         async function fetchBotStatus() {
             try {
-                const response = await fetch('/api/bot/status');
-                const data = await response.json();
+                const res = await fetch('/api/bot/status', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin'
+                });
+
+                // Check if response is JSON
+                const contentType = res.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await res.text();
+                    throw new Error(`Server returned HTML instead of JSON. Status: ${res.status}`);
+                }
+
+                const data = await res.json();
                 statusListElement.innerHTML = '';
-                
-                if (data.bots.length === 0) {
-                    statusListElement.innerHTML = '<p class="text-gray-400 text-sm">No bots running.</p>';
+
+                if (data.bots && data.bots.length === 0) {
+                    statusListElement.innerHTML = `<div class="bg-gray-800/40 rounded-lg p-4 text-center border border-gray-700 border-dashed"><span class="text-gray-500 text-sm">No active sessions</span></div>`;
                     return;
                 }
 
-                data.bots.forEach(bot => {
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = 'status-card bg-gray-800 rounded-xl p-4 border-l-4 border-green-500 shadow-lg';
-                    
-                    const statusColor = bot.is_running ? 'green' : 'yellow';
-                    const statusText = bot.is_running ? 'Connected' : 'Starting';
-                    
-                    statusDiv.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h4 class="font-bold text-gray-200">${bot.display_name}</h4>
-                                <p class="text-xs text-gray-500 mt-1">${bot.phone_number}</p>
-                            </div>
-                            <span class="px-2 py-1 bg-${statusColor}-900/30 text-${statusColor}-400 text-xs rounded border border-${statusColor}-800 flex items-center gap-1">
-                                <i class="fas fa-wifi"></i> ${statusText}
-                            </span>
-                        </div>
-                    `;
-                    
-                    statusListElement.appendChild(statusDiv);
-                });
+                // Rest of your existing code for displaying bots...
+                if (data.bots) {
+                    data.bots.forEach(bot => {
+                        const phone = bot.phone_number;
+                        const isRunning = bot.is_running;
 
-            } catch (error) {
-                statusListElement.innerHTML = `<p class="text-red-400 text-sm">Error: ${error.message}</p>`;
+                        const card = document.createElement('div');
+                        card.className = `status-card bg-gray-800 rounded-xl p-4 border-l-4 ${isRunning ? 'border-green-500' : 'border-red-500'} shadow-lg fade-in`;
+
+                        const uptimeHtml = isRunning ? `
+                            <div class="mt-3 pt-3 border-t border-gray-700 flex justify-between items-center text-sm">
+                                <span class="text-gray-400"><i class="far fa-clock mr-1"></i> Uptime</span>
+                                <span data-uptime="${phone}" class="font-mono text-blue-400 font-bold">00h 00m 00s</span>
+                            </div>` : '';
+
+                        card.innerHTML = `
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-gray-200">${bot.display_name || 'Userbot'}</h4>
+                                    <p class="text-xs text-gray-500 mt-1">${phone}</p>
+                                </div>
+                                <span class="px-2 py-1 ${isRunning ? 'bg-green-900/30 text-green-400 border-green-800' : 'bg-red-900/30 text-red-400 border-red-800'} text-xs rounded border flex items-center gap-1">
+                                    <i class="fas ${isRunning ? 'fa-wifi' : 'fa-unlink'}"></i> ${isRunning ? 'Connected' : 'Stopped'}
+                                </span>
+                            </div>
+                            ${uptimeHtml}
+                        `;
+                        statusListElement.appendChild(card);
+
+                        if (isRunning) {
+                            startUptimeCounter(phone);
+                        } else {
+                            stopUptimeCounter(phone);
+                        }
+                    });
+                }
+
+                updateSystemMetrics();
+            } catch (err) {
+                console.error('Fetch status error:', err);
+                statusListElement.innerHTML = `
+                    <div class="bg-red-900/20 rounded-lg p-4 text-center border border-red-700">
+                        <span class="text-red-400 text-sm">Error fetching status: ${err.message}</span>
+                    </div>
+                `;
             }
         }
 
+        // --- INIT ---
         document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            loadCommandHistory();
+            updateHistoryUI();
+            appendOutput("[System] Advanced Userbot Manager loaded.\n");
+            appendOutput("[System] Features: Multi-account, Bulk operations, Notifications, Session recovery\n");
             fetchBotStatus();
-            setInterval(fetchBotStatus, 5000); 
+            
+            // Update system metrics every 5 seconds
+            setInterval(updateSystemMetrics, 5000);
+            setInterval(fetchBotStatus, 10000);
         });
     </script>
 </body>
